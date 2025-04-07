@@ -32,7 +32,31 @@ export default function Sidebar() {
   
   const isAdmin = user?.role === "admin";
 
-  const commonNavItems = [
+  const cashierNavItems = [
+    {
+      name: "Tableau de bord",
+      href: "/",
+      icon: HomeIcon,
+    },
+    {
+      name: "Entrées journalières",
+      href: "/daily-entries",
+      icon: ClockIcon,
+    },
+    {
+      name: "Abonnements",
+      href: "/subscriptions",
+      icon: BellIcon,
+    },
+    {
+      name: "Café & Boissons",
+      href: "/cafe",
+      icon: BookOpenIcon,
+    },
+  ];
+  
+  // Admin-only navigation items
+  const adminNavItems = [
     {
       name: "Tableau de bord",
       href: "/",
@@ -68,23 +92,15 @@ export default function Sidebar() {
       href: "/expenses",
       icon: DollarSign,
     },
-  ];
-  
-  // Admin-only navigation items
-  const adminNavItems = [
     {
       name: "Utilisateurs",
       href: "/users",
       icon: Users,
-      requiresAdmin: true,
     },
   ];
   
-  // Combine navigation items based on user role
-  const navItems = [
-    ...commonNavItems,
-    ...(isAdmin ? adminNavItems : []),
-  ];
+  // Use the appropriate navigation items based on user role
+  const navItems = isAdmin ? adminNavItems : cashierNavItems;
 
   const handleLogout = () => {
     logoutMutation.mutate();

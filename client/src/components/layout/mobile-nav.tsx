@@ -29,7 +29,26 @@ export default function MobileNav() {
     setOpen(false);
   };
 
-  const bottomNavItems = [
+  // Bottom navigation items based on user role
+  const cashierBottomNavItems = [
+    {
+      name: "Accueil",
+      href: "/",
+      icon: HomeIcon,
+    },
+    {
+      name: "Entrées",
+      href: "/daily-entries",
+      icon: ClockIcon,
+    },
+    {
+      name: "Café",
+      href: "/cafe",
+      icon: BookOpenIcon,
+    },
+  ];
+  
+  const adminBottomNavItems = [
     {
       name: "Accueil",
       href: "/",
@@ -51,6 +70,9 @@ export default function MobileNav() {
       icon: CalendarIcon,
     },
   ];
+  
+  // Use appropriate bottom navigation items based on role
+  const bottomNavItems = isAdmin ? adminBottomNavItems : cashierBottomNavItems;
 
   return (
     <>
@@ -71,7 +93,8 @@ export default function MobileNav() {
               <h2 className="text-xl font-semibold text-gray-800">Menu</h2>
             </div>
             <div className="mt-6 space-y-1">
-              {[
+              {(isAdmin ? [
+                // Admin menu items
                 {
                   name: "Tableau de bord",
                   href: "/",
@@ -106,15 +129,35 @@ export default function MobileNav() {
                   name: "Dépenses",
                   href: "/expenses",
                   icon: DollarSign,
-                  requiresAdmin: true,
                 },
                 {
                   name: "Utilisateurs",
                   href: "/users",
                   icon: Users,
-                  requiresAdmin: true,
                 },
-              ].filter(item => !item.requiresAdmin || isAdmin).map((item) => {
+              ] : [
+                // Cashier menu items
+                {
+                  name: "Tableau de bord",
+                  href: "/",
+                  icon: HomeIcon,
+                },
+                {
+                  name: "Entrées journalières",
+                  href: "/daily-entries",
+                  icon: ClockIcon,
+                },
+                {
+                  name: "Abonnements",
+                  href: "/subscriptions",
+                  icon: ClockIcon,
+                },
+                {
+                  name: "Café & Boissons",
+                  href: "/cafe",
+                  icon: BookOpenIcon,
+                },
+              ]).map((item) => {
                 const isActive = location === item.href;
                 return (
                   <Link
