@@ -1,9 +1,12 @@
 import { 
   InsertProduct, InsertTransaction, InsertDailyStats,
   Product, Transaction, DailyStats,
-  TransactionType, PaymentMethod
+  TransactionType, PaymentMethod,
+  products, transactions, dailyStats
 } from "@shared/schema";
 import { startOfDay, endOfDay, format, parseISO, addMonths } from "date-fns";
+import { db } from "./db";
+import { eq, gte, lte, desc, and, asc } from "drizzle-orm";
 
 export interface IStorage {
   // Products
@@ -25,114 +28,76 @@ export interface IStorage {
   getDailyStatsByRange(startDate: Date, endDate: Date): Promise<DailyStats[]>;
 }
 
-export class MemStorage implements IStorage {
-  private products: Map<number, Product>;
-  private transactions: Map<number, Transaction>;
-  private dailyStatsMap: Map<string, DailyStats>;
-  
-  private productId: number;
-  private transactionId: number;
-  private dailyStatsId: number;
-  
-  constructor() {
-    this.products = new Map();
-    this.transactions = new Map();
-    this.dailyStatsMap = new Map();
-    
-    this.productId = 1;
-    this.transactionId = 1;
-    this.dailyStatsId = 1;
-    
-    // Initialize with sample products
-    this.initializeProducts();
-  }
-  
-  private initializeProducts() {
-    const defaultProducts: InsertProduct[] = [
-      { name: "Café expresso", price: 15, category: "beverage", isActive: true },
-      { name: "Café américain", price: 18, category: "beverage", isActive: true },
-      { name: "Thé à la menthe", price: 12, category: "beverage", isActive: true },
-      { name: "Eau minérale", price: 10, category: "beverage", isActive: true },
-      { name: "Jus d'orange", price: 20, category: "beverage", isActive: true }
-    ];
-    
-    defaultProducts.forEach(product => this.createProduct(product));
-  }
-  
+export class DatabaseStorage implements IStorage {
   // Products
   async getAllProducts(): Promise<Product[]> {
-    return Array.from(this.products.values());
+    return await db.select().from(products);
   }
   
   async getProduct(id: number): Promise<Product | undefined> {
-    return this.products.get(id);
+    const result = await db.select().from(products).where(eq(products.id, id));
+    return result.length > 0 ? result[0] : undefined;
   }
   
   async createProduct(product: InsertProduct): Promise<Product> {
-    const newProduct: Product = {
-      ...product,
-      id: this.productId++
-    };
-    this.products.set(newProduct.id, newProduct);
-    return newProduct;
+    const result = await db.insert(products).values(product).returning();
+    return result[0];
   }
   
   async updateProduct(id: number, product: Partial<Product>): Promise<Product | undefined> {
-    const existingProduct = this.products.get(id);
-    if (!existingProduct) return undefined;
-    
-    const updatedProduct = { ...existingProduct, ...product };
-    this.products.set(id, updatedProduct);
-    return updatedProduct;
+    const result = await db.update(products)
+      .set(product)
+      .where(eq(products.id, id))
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
   }
   
   // Transactions
   async getAllTransactions(limit?: number, offset = 0): Promise<Transaction[]> {
-    const allTransactions = Array.from(this.transactions.values())
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const query = db.select()
+      .from(transactions)
+      .orderBy(desc(transactions.date));
     
     if (limit) {
-      return allTransactions.slice(offset, offset + limit);
+      query.limit(limit).offset(offset);
     }
     
-    return allTransactions;
+    return await query;
   }
   
   async getTransactionsByDateRange(startDate: Date, endDate: Date): Promise<Transaction[]> {
-    const start = startOfDay(startDate).getTime();
-    const end = endOfDay(endDate).getTime();
+    const start = startOfDay(startDate);
+    const end = endOfDay(endDate);
     
-    return Array.from(this.transactions.values())
-      .filter(tx => {
-        const txDate = new Date(tx.date).getTime();
-        return txDate >= start && txDate <= end;
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return await db.select()
+      .from(transactions)
+      .where(and(
+        gte(transactions.date, start),
+        lte(transactions.date, end)
+      ))
+      .orderBy(desc(transactions.date));
   }
   
   async getTransactionsByType(type: TransactionType): Promise<Transaction[]> {
-    return Array.from(this.transactions.values())
-      .filter(tx => tx.type === type)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return await db.select()
+      .from(transactions)
+      .where(eq(transactions.type, type))
+      .orderBy(desc(transactions.date));
   }
   
   async getTransaction(id: number): Promise<Transaction | undefined> {
-    return this.transactions.get(id);
+    const result = await db.select().from(transactions).where(eq(transactions.id, id));
+    return result.length > 0 ? result[0] : undefined;
   }
   
   async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: this.transactionId++,
-      date: transaction.date || new Date()
-    };
-    
     // If it's a subscription, calculate end date if not provided
-    if (newTransaction.type === 'subscription' && !newTransaction.subscriptionEndDate) {
-      newTransaction.subscriptionEndDate = addMonths(new Date(newTransaction.date), 1);
+    if (transaction.type === 'subscription' && !transaction.subscriptionEndDate) {
+      transaction.subscriptionEndDate = addMonths(transaction.date || new Date(), 1);
     }
     
-    this.transactions.set(newTransaction.id, newTransaction);
+    const result = await db.insert(transactions).values(transaction).returning();
+    const newTransaction = result[0];
     
     // Update daily stats
     await this.updateStatsForTransaction(newTransaction);
@@ -142,39 +107,62 @@ export class MemStorage implements IStorage {
   
   // Daily stats
   async getDailyStats(date: Date): Promise<DailyStats | undefined> {
-    const dateKey = format(date, 'yyyy-MM-dd');
-    return this.dailyStatsMap.get(dateKey);
+    const dayStart = startOfDay(date);
+    const result = await db.select().from(dailyStats).where(eq(dailyStats.date, dayStart));
+    return result.length > 0 ? result[0] : undefined;
   }
   
   async upsertDailyStats(stats: InsertDailyStats): Promise<DailyStats> {
-    const dateKey = format(new Date(stats.date), 'yyyy-MM-dd');
-    const existingStats = this.dailyStatsMap.get(dateKey);
+    const dayStart = startOfDay(stats.date);
+    
+    // Try to find existing stats
+    const existingStats = await this.getDailyStats(dayStart);
     
     if (existingStats) {
-      const updatedStats = { ...existingStats, ...stats };
-      this.dailyStatsMap.set(dateKey, updatedStats);
-      return updatedStats;
+      // Update existing stats
+      const result = await db.update(dailyStats)
+        .set({
+          totalRevenue: stats.totalRevenue !== undefined ? stats.totalRevenue : existingStats.totalRevenue,
+          entriesRevenue: stats.entriesRevenue !== undefined ? stats.entriesRevenue : existingStats.entriesRevenue,
+          entriesCount: stats.entriesCount !== undefined ? stats.entriesCount : existingStats.entriesCount,
+          subscriptionsRevenue: stats.subscriptionsRevenue !== undefined ? stats.subscriptionsRevenue : existingStats.subscriptionsRevenue,
+          subscriptionsCount: stats.subscriptionsCount !== undefined ? stats.subscriptionsCount : existingStats.subscriptionsCount,
+          cafeRevenue: stats.cafeRevenue !== undefined ? stats.cafeRevenue : existingStats.cafeRevenue,
+          cafeOrdersCount: stats.cafeOrdersCount !== undefined ? stats.cafeOrdersCount : existingStats.cafeOrdersCount
+        })
+        .where(eq(dailyStats.id, existingStats.id))
+        .returning();
+      
+      return result[0];
+    } else {
+      // Create new stats
+      const statsWithDefaults = {
+        date: dayStart,
+        totalRevenue: stats.totalRevenue || 0,
+        entriesRevenue: stats.entriesRevenue || 0,
+        entriesCount: stats.entriesCount || 0,
+        subscriptionsRevenue: stats.subscriptionsRevenue || 0,
+        subscriptionsCount: stats.subscriptionsCount || 0,
+        cafeRevenue: stats.cafeRevenue || 0,
+        cafeOrdersCount: stats.cafeOrdersCount || 0
+      };
+      
+      const result = await db.insert(dailyStats).values(statsWithDefaults).returning();
+      return result[0];
     }
-    
-    const newStats: DailyStats = {
-      ...stats,
-      id: this.dailyStatsId++
-    };
-    
-    this.dailyStatsMap.set(dateKey, newStats);
-    return newStats;
   }
   
   async getDailyStatsByRange(startDate: Date, endDate: Date): Promise<DailyStats[]> {
-    const start = startOfDay(startDate).getTime();
-    const end = endOfDay(endDate).getTime();
+    const start = startOfDay(startDate);
+    const end = endOfDay(endDate);
     
-    return Array.from(this.dailyStatsMap.values())
-      .filter(stats => {
-        const statsDate = new Date(stats.date).getTime();
-        return statsDate >= start && statsDate <= end;
-      })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return await db.select()
+      .from(dailyStats)
+      .where(and(
+        gte(dailyStats.date, start),
+        lte(dailyStats.date, end)
+      ))
+      .orderBy(asc(dailyStats.date));
   }
   
   // Helper methods
@@ -184,7 +172,7 @@ export class MemStorage implements IStorage {
     
     if (!stats) {
       stats = {
-        id: this.dailyStatsId++,
+        id: 0, // Will be auto-generated by DB
         date: transactionDate,
         totalRevenue: 0,
         entriesRevenue: 0,
@@ -216,6 +204,36 @@ export class MemStorage implements IStorage {
     
     await this.upsertDailyStats(stats);
   }
+  
+  // Initialize products if none exist
+  async initializeDefaultProductsIfNeeded(): Promise<void> {
+    const existingProducts = await this.getAllProducts();
+    
+    if (existingProducts.length === 0) {
+      const defaultProducts: InsertProduct[] = [
+        { name: "Café expresso", price: 15, category: "beverage", isActive: true },
+        { name: "Café américain", price: 18, category: "beverage", isActive: true },
+        { name: "Thé à la menthe", price: 12, category: "beverage", isActive: true },
+        { name: "Eau minérale", price: 10, category: "beverage", isActive: true },
+        { name: "Jus d'orange", price: 20, category: "beverage", isActive: true }
+      ];
+      
+      for (const product of defaultProducts) {
+        await this.createProduct(product);
+      }
+    }
+  }
 }
 
-export const storage = new MemStorage();
+// Create and initialize the database storage
+export const storage = new DatabaseStorage();
+
+// Initialize default products (this will run when the server starts)
+(async () => {
+  try {
+    await (storage as DatabaseStorage).initializeDefaultProductsIfNeeded();
+    console.log("Storage initialization complete");
+  } catch (error) {
+    console.error("Error initializing storage:", error);
+  }
+})();
