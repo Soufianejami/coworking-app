@@ -14,6 +14,7 @@ import Reports from "@/pages/reports";
 import Users from "@/pages/users";
 import Expenses from "@/pages/expenses";
 import Stock from "@/pages/stock";
+import Products from "@/pages/products";
 import AuthPage from "@/pages/auth-page";
 import NotFound from "@/pages/not-found";
 
@@ -35,6 +36,7 @@ function Router() {
       {/* Admin-only routes */}
       <ProtectedRoute path="/users" component={Users} allowedRoles={["admin"]} />
       <ProtectedRoute path="/stock" component={Stock} allowedRoles={["admin"]} />
+      <ProtectedRoute path="/products" component={Products} allowedRoles={["admin"]} />
       
       {/* 404 route */}
       <Route component={NotFound} />

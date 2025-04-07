@@ -13,6 +13,7 @@ import {
   DollarSign,
   Loader2,
   CakeSlice,
+  ShoppingCart
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
@@ -92,6 +93,11 @@ export default function Sidebar() {
       name: "Dépenses",
       href: "/expenses",
       icon: DollarSign,
+    },
+    {
+      name: "Gestion des Produits",
+      href: "/products",
+      icon: ShoppingCart,
     },
     {
       name: "Gestion du Stock",
