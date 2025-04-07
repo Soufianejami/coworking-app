@@ -7,7 +7,7 @@ import {
   insertUserSchema, USER_ROLES, EXPENSE_CATEGORIES, STOCK_ACTION_TYPES
 } from "@shared/schema";
 import { format, parseISO, subMonths, startOfMonth, endOfMonth } from "date-fns";
-import { setupAuth, requireAdmin, hashPassword } from "./auth";
+import { setupAuth, requireAdmin, requireSuperAdmin, requireAdminOrSuperAdmin, hashPassword } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication
@@ -189,6 +189,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Transaction creation error:", error);
       res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Update transaction (super_admin only)
+  app.patch(`${apiPrefix}/transactions/:id`, requireSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de transaction invalide" });
+      }
+      
+      // Get the transaction to ensure it exists
+      const transaction = await storage.getTransaction(id);
+      if (!transaction) {
+        return res.status(404).json({ message: "Transaction non trouvée" });
+      }
+      
+      // Update the transaction
+      const updatedTransaction = await storage.updateTransaction(id, req.body);
+      if (!updatedTransaction) {
+        return res.status(500).json({ message: "Erreur lors de la mise à jour de la transaction" });
+      }
+      
+      res.json(updatedTransaction);
+    } catch (error: any) {
+      console.error("Erreur de mise à jour de transaction:", error);
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Delete transaction (super_admin only)
+  app.delete(`${apiPrefix}/transactions/:id`, requireSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de transaction invalide" });
+      }
+      
+      // Delete the transaction
+      const result = await storage.deleteTransaction(id);
+      if (!result) {
+        return res.status(404).json({ message: "Transaction non trouvée" });
+      }
+      
+      res.status(200).json({ message: "Transaction supprimée avec succès" });
+    } catch (error: any) {
+      console.error("Erreur de suppression de transaction:", error);
+      res.status(500).json({ message: error.message });
     }
   });
   

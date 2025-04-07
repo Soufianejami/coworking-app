@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // User roles
-export const USER_ROLES = ["admin", "cashier"] as const;
+export const USER_ROLES = ["super_admin", "admin", "cashier"] as const;
 export type UserRole = typeof USER_ROLES[number];
 
 // Base user schema

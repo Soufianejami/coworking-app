@@ -176,8 +176,10 @@ export function setupAuth(app: Express) {
       return next();
     }
     
-    // For admin-only endpoints, check if user is admin
-    if (!req.isAuthenticated() || (req.user as Express.User).role !== 'admin') {
+    // For admin-only endpoints, check if user is admin or super_admin
+    if (!req.isAuthenticated() || 
+        ((req.user as Express.User).role !== 'admin' && 
+         (req.user as Express.User).role !== 'super_admin')) {
       return res.status(403).json({ message: "Forbidden: Admin access required" });
     }
     
@@ -201,3 +203,17 @@ export const requireRole = (role: string) => {
 };
 
 export const requireAdmin = requireRole('admin');
+export const requireSuperAdmin = requireRole('super_admin');
+
+// Middleware qui accepte admin ou super_admin
+export const requireAdminOrSuperAdmin = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  
+  if ((req.user as Express.User).role !== 'admin' && (req.user as Express.User).role !== 'super_admin') {
+    return res.status(403).json({ message: "Forbidden: Admin or Super Admin access required" });
+  }
+  
+  next();
+};

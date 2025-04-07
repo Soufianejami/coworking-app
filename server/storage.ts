@@ -72,6 +72,7 @@ export class DatabaseStorage implements IStorage {
         productId: inventory.productId,
         quantity: inventory.quantity,
         minThreshold: inventory.minThreshold,
+        purchasePrice: inventory.purchasePrice,
         expirationDate: inventory.expirationDate,
         lastRestockDate: inventory.lastRestockDate,
         createdAt: inventory.createdAt,
@@ -90,6 +91,7 @@ export class DatabaseStorage implements IStorage {
         productId: inventory.productId,
         quantity: inventory.quantity,
         minThreshold: inventory.minThreshold,
+        purchasePrice: inventory.purchasePrice,
         expirationDate: inventory.expirationDate,
         lastRestockDate: inventory.lastRestockDate,
         createdAt: inventory.createdAt,
@@ -124,6 +126,29 @@ export class DatabaseStorage implements IStorage {
       updatedAt: new Date() // Ensure updatedAt is set
     }).returning();
     
+    // Si un prix d'achat est défini, créer automatiquement une dépense
+    if (item.purchasePrice && item.purchasePrice > 0) {
+      try {
+        // Récupérer le nom du produit
+        const [product] = await db.select().from(products).where(eq(products.id, item.productId));
+        
+        if (product) {
+          // Créer une dépense correspondant à l'achat du stock
+          await this.createExpense({
+            amount: item.purchasePrice * (item.quantity || 1), // Total du coût = prix unitaire × quantité
+            category: "supplies",
+            date: new Date(),
+            description: `Achat de stock: ${product.name}`,
+            paymentMethod: "cash",
+            createdById: 1 // Utiliser l'ID 1 (admin) par défaut
+          });
+        }
+      } catch (error) {
+        console.error("Erreur lors de la création de la dépense pour le stock:", error);
+        // On ne bloque pas la création de l'inventaire si la dépense échoue
+      }
+    }
+    
     return result[0];
   }
   
@@ -149,6 +174,7 @@ export class DatabaseStorage implements IStorage {
         productId: inventory.productId,
         quantity: inventory.quantity,
         minThreshold: inventory.minThreshold,
+        purchasePrice: inventory.purchasePrice,
         expirationDate: inventory.expirationDate,
         lastRestockDate: inventory.lastRestockDate,
         createdAt: inventory.createdAt,
@@ -171,6 +197,7 @@ export class DatabaseStorage implements IStorage {
         productId: inventory.productId,
         quantity: inventory.quantity,
         minThreshold: inventory.minThreshold,
+        purchasePrice: inventory.purchasePrice,
         expirationDate: inventory.expirationDate,
         lastRestockDate: inventory.lastRestockDate,
         createdAt: inventory.createdAt,
@@ -224,6 +251,29 @@ export class DatabaseStorage implements IStorage {
       reason,
       performedById: userId
     }).returning();
+    
+    // Si le produit a un prix d'achat, créer automatiquement une dépense
+    if (invItem.purchasePrice && invItem.purchasePrice > 0) {
+      try {
+        // Récupérer le nom du produit
+        const [product] = await db.select().from(products).where(eq(products.id, productId));
+        
+        if (product) {
+          // Créer une dépense correspondant à l'ajout de stock
+          await this.createExpense({
+            amount: invItem.purchasePrice * quantity, // Total du coût = prix unitaire × quantité ajoutée
+            category: "supplies",
+            date: new Date(),
+            description: `Achat de stock: ${product.name} (${quantity} unités)`,
+            paymentMethod: "cash",
+            createdById: userId
+          });
+        }
+      } catch (error) {
+        console.error("Erreur lors de la création de la dépense pour l'ajout de stock:", error);
+        // On ne bloque pas l'ajout de stock si la dépense échoue
+      }
+    }
     
     return {
       inventory: updatedInv,
@@ -526,6 +576,118 @@ export class DatabaseStorage implements IStorage {
     await this.updateStatsForTransaction(newTransaction);
     
     return newTransaction;
+  }
+  
+  async updateTransaction(id: number, data: Partial<Transaction>): Promise<Transaction | undefined> {
+    // Get the original transaction first
+    const originalTransaction = await this.getTransaction(id);
+    if (!originalTransaction) {
+      return undefined;
+    }
+    
+    // If changing type to subscription, ensure subscription end date is set
+    if (data.type === 'subscription' && !data.subscriptionEndDate) {
+      // Use provided date or existing date or current date
+      const startDate = data.date || originalTransaction.date || new Date();
+      data.subscriptionEndDate = addMonths(startDate, 1);
+    }
+    
+    // Update the transaction
+    const result = await db.update(transactions)
+      .set(data)
+      .where(eq(transactions.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      return undefined;
+    }
+    
+    const updatedTransaction = result[0];
+    
+    // If the amount, date, or type changed, we need to update stats
+    if (
+      data.amount !== undefined || 
+      data.date !== undefined || 
+      data.type !== undefined
+    ) {
+      // First, remove the impact of the original transaction
+      const originalDate = startOfDay(originalTransaction.date);
+      let originalStats = await this.getDailyStats(originalDate);
+      
+      if (originalStats) {
+        // Subtract the original transaction values
+        originalStats.totalRevenue -= originalTransaction.amount;
+        
+        switch (originalTransaction.type) {
+          case 'entry':
+            originalStats.entriesRevenue -= originalTransaction.amount;
+            originalStats.entriesCount = Math.max(0, originalStats.entriesCount - 1);
+            break;
+          case 'subscription':
+            originalStats.subscriptionsRevenue -= originalTransaction.amount;
+            originalStats.subscriptionsCount = Math.max(0, originalStats.subscriptionsCount - 1);
+            break;
+          case 'cafe':
+            originalStats.cafeRevenue -= originalTransaction.amount;
+            originalStats.cafeOrdersCount = Math.max(0, originalStats.cafeOrdersCount - 1);
+            break;
+        }
+        
+        // Update the stats for the original date
+        await this.upsertDailyStats(originalStats);
+      }
+      
+      // Then, add the impact of the updated transaction
+      await this.updateStatsForTransaction(updatedTransaction);
+    }
+    
+    return updatedTransaction;
+  }
+  
+  async deleteTransaction(id: number): Promise<boolean> {
+    // Get the transaction first to update stats later
+    const transaction = await this.getTransaction(id);
+    if (!transaction) {
+      return false;
+    }
+    
+    // Delete the transaction
+    const result = await db.delete(transactions)
+      .where(eq(transactions.id, id))
+      .returning({ id: transactions.id });
+    
+    if (result.length === 0) {
+      return false;
+    }
+    
+    // Update stats by removing this transaction's contribution
+    const transactionDate = startOfDay(transaction.date);
+    let stats = await this.getDailyStats(transactionDate);
+    
+    if (stats) {
+      // Subtract the transaction values
+      stats.totalRevenue -= transaction.amount;
+      
+      switch (transaction.type) {
+        case 'entry':
+          stats.entriesRevenue -= transaction.amount;
+          stats.entriesCount = Math.max(0, stats.entriesCount - 1);
+          break;
+        case 'subscription':
+          stats.subscriptionsRevenue -= transaction.amount;
+          stats.subscriptionsCount = Math.max(0, stats.subscriptionsCount - 1);
+          break;
+        case 'cafe':
+          stats.cafeRevenue -= transaction.amount;
+          stats.cafeOrdersCount = Math.max(0, stats.cafeOrdersCount - 1);
+          break;
+      }
+      
+      // Update the stats
+      await this.upsertDailyStats(stats);
+    }
+    
+    return true;
   }
   
   // Daily stats
