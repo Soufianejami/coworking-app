@@ -186,6 +186,16 @@ export default function ProductsPage() {
   });
 
   const handleSubmit = (values: ProductFormValues) => {
+    // Empêcher l'ajout de nouvelles boissons depuis cette page (sauf modification)
+    if (values.category === "beverage" && !editingProduct) {
+      toast({
+        title: "Opération non autorisée",
+        description: "Les nouvelles boissons doivent être ajoutées depuis la gestion du stock",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (editingProduct) {
       updateProductMutation.mutate({
         ...values,
@@ -467,7 +477,18 @@ export default function ProductsPage() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="coffee">Café</SelectItem>
-                        <SelectItem value="beverage">Boisson</SelectItem>
+                        {/* Désactivation de l'option boisson dans la gestion des produits */}
+                        {editingProduct?.category === "beverage" ? (
+                          <SelectItem value="beverage">Boisson</SelectItem>
+                        ) : (
+                          <SelectItem
+                            value="beverage"
+                            disabled
+                            className="text-muted-foreground"
+                          >
+                            Boisson (géré dans Stock)
+                          </SelectItem>
+                        )}
                         <SelectItem value="other">Autre</SelectItem>
                       </SelectContent>
                     </Select>

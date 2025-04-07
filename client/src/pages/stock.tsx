@@ -295,11 +295,12 @@ export default function StockPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/low-stock"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/expiring"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });  // Pour mettre à jour la liste des produits
       setIsCreateInventoryOpen(false);
       setInventoryForm({ productId: "", minThreshold: "5", purchasePrice: "", expirationDate: "" });
       toast({
-        title: "Inventaire créé",
-        description: "Le nouvel élément d'inventaire a été créé avec succès.",
+        title: "Produit ajouté",
+        description: "Le produit a été ajouté à l'inventaire et est maintenant disponible dans le menu.",
       });
     },
     onError: (error: Error) => {
@@ -419,7 +420,12 @@ export default function StockPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Gestion des Stocks - Boissons</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Gestion des Stocks - Boissons</h1>
+          <p className="text-gray-500">
+            Gérez les stocks des boissons et ajoutez-les au menu
+          </p>
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setIsCreateInventoryOpen(true)} disabled={productsWithoutInventory.length === 0}>
             <PlusCircle className="h-4 w-4 mr-2" />
