@@ -822,8 +822,18 @@ export class DatabaseStorage implements IStorage {
         fullName: "Administrator",
       };
       
+      // Create default super_admin user
+      const superAdmin: InsertUser = {
+        username: "superadmin",
+        password: await hashPasswordFn("superadmin"), // Default password is "superadmin"
+        role: "super_admin",
+        fullName: "Super Administrator",
+      };
+      
       await this.createUser(defaultAdmin);
+      await this.createUser(superAdmin);
       console.log("Default admin user created with username: admin and password: admin");
+      console.log("Default super_admin user created with username: superadmin and password: superadmin");
     }
   }
 }
