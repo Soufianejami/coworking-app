@@ -12,6 +12,7 @@ import {
   Users,
   DollarSign,
   Loader2,
+  CakeSlice,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
@@ -91,6 +92,11 @@ export default function Sidebar() {
       name: "Dépenses",
       href: "/expenses",
       icon: DollarSign,
+    },
+    {
+      name: "Gestion du Stock",
+      href: "/stock",
+      icon: CakeSlice,
     },
     {
       name: "Utilisateurs",

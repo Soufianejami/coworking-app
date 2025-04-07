@@ -170,3 +170,79 @@ export const insertExpenseSchema = createInsertSchema(expenses).omit({
 
 export type InsertExpense = z.infer<typeof insertExpenseSchema>;
 export type Expense = typeof expenses.$inferSelect;
+
+// Stock management types
+export const STOCK_ACTION_TYPES = ["add", "remove", "adjust"] as const;
+export type StockActionType = typeof STOCK_ACTION_TYPES[number];
+
+// Inventory for beverages
+export const inventory = pgTable("inventory", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  quantity: integer("quantity").notNull().default(0),
+  minThreshold: integer("min_threshold").notNull().default(5), // Alert threshold
+  expirationDate: timestamp("expiration_date"), // Can be null for items without expiration
+  lastRestockDate: timestamp("last_restock_date").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertInventorySchema = createInsertSchema(inventory).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  expirationDate: z.union([
+    z.date(),
+    z.string().transform((str) => {
+      try {
+        return new Date(str);
+      } catch (error) {
+        console.error("Error parsing expiration date:", str, error);
+        // Set a default expiration date 6 months from now as fallback
+        const date = new Date();
+        date.setMonth(date.getMonth() + 6);
+        return date;
+      }
+    })
+  ]).optional().nullable(),
+  lastRestockDate: z.union([
+    z.date(),
+    z.string().transform((str) => {
+      try {
+        return new Date(str);
+      } catch (error) {
+        console.error("Error parsing last restock date:", str, error);
+        return new Date(); // Fallback to current date
+      }
+    })
+  ]).optional(),
+});
+
+export type InsertInventory = z.infer<typeof insertInventorySchema>;
+export type Inventory = typeof inventory.$inferSelect;
+
+// Stock movement history
+export const stockMovements = pgTable("stock_movements", {
+  id: serial("id").primaryKey(),
+  inventoryId: integer("inventory_id").notNull().references(() => inventory.id),
+  productId: integer("product_id").notNull().references(() => products.id),
+  quantity: integer("quantity").notNull(), // Can be negative for removal
+  actionType: text("action_type", { enum: STOCK_ACTION_TYPES }).notNull().default("add"),
+  reason: text("reason"), // Optional reason for the movement
+  transactionId: integer("transaction_id").references(() => transactions.id), // If related to a sale
+  performedById: integer("performed_by_id").notNull().references(() => users.id),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
+export const insertStockMovementSchema = createInsertSchema(stockMovements).omit({
+  id: true,
+  timestamp: true,
+}).extend({
+  actionType: z.enum(STOCK_ACTION_TYPES),
+  reason: z.string().optional(),
+  transactionId: z.number().optional(),
+});
+
+export type InsertStockMovement = z.infer<typeof insertStockMovementSchema>;
+export type StockMovement = typeof stockMovements.$inferSelect;

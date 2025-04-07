@@ -3,7 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
   insertProductSchema, insertTransactionSchema, insertExpenseSchema, 
-  insertUserSchema, USER_ROLES, EXPENSE_CATEGORIES
+  insertInventorySchema, insertStockMovementSchema,
+  insertUserSchema, USER_ROLES, EXPENSE_CATEGORIES, STOCK_ACTION_TYPES
 } from "@shared/schema";
 import { format, parseISO, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { setupAuth, requireAdmin, hashPassword } from "./auth";
@@ -143,6 +144,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create the transaction
       const newTransaction = await storage.createTransaction(transactionData);
+      
+      // If this is a cafe transaction with items, update the stock for beverages
+      if (newTransaction.type === 'cafe' && newTransaction.items && Array.isArray(newTransaction.items)) {
+        const userId = (req.user as any).id;
+        
+        // Check each item in the transaction
+        for (const item of newTransaction.items) {
+          try {
+            // Get the product to check if it's a beverage (not coffee)
+            const product = await storage.getProduct(item.id);
+            
+            // Skip if product not found or it's not a beverage or it's a coffee product
+            if (!product || product.category !== 'beverage' || product.name.toLowerCase().includes('café')) {
+              continue;
+            }
+            
+            // Check if there's inventory for this product
+            const inventoryItem = await storage.getInventoryItemByProductId(item.id);
+            
+            // If inventory exists, reduce the stock
+            if (inventoryItem) {
+              try {
+                await storage.removeStock(
+                  item.id, 
+                  item.quantity, 
+                  userId, 
+                  `Vente - Transaction #${newTransaction.id}`,
+                  newTransaction.id
+                );
+                console.log(`Updated stock for product ${item.id}, removed ${item.quantity} units`);
+              } catch (stockError: any) {
+                // Just log the error but don't fail the transaction
+                console.error(`Failed to update stock for product ${item.id}: ${stockError.message}`);
+              }
+            }
+          } catch (productError: any) {
+            console.error(`Error processing product ${item.id}: ${productError.message}`);
+          }
+        }
+      }
+      
       res.status(201).json(newTransaction);
     } catch (error: any) {
       console.error("Transaction creation error:", error);
@@ -462,6 +504,156 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return breakdown;
         }, {})
       });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Inventory routes (admin only)
+  app.get(`${apiPrefix}/inventory`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const inventory = await storage.getInventoryWithProducts();
+      res.json(inventory);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get(`${apiPrefix}/inventory/low-stock`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const lowStockItems = await storage.getLowStockItems();
+      res.json(lowStockItems);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get(`${apiPrefix}/inventory/expiring`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const daysThreshold = req.query.days ? parseInt(req.query.days as string) : 7;
+      const expiringItems = await storage.getExpiringItems(daysThreshold);
+      res.json(expiringItems);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get(`${apiPrefix}/inventory/:id`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid inventory ID" });
+      }
+      
+      const inventoryItem = await storage.getInventoryItem(id);
+      if (!inventoryItem) {
+        return res.status(404).json({ message: "Inventory item not found" });
+      }
+      
+      res.json(inventoryItem);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post(`${apiPrefix}/inventory`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const inventoryData = insertInventorySchema.parse(req.body);
+      const newInventoryItem = await storage.createInventoryItem(inventoryData);
+      res.status(201).json(newInventoryItem);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.patch(`${apiPrefix}/inventory/:id`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid inventory ID" });
+      }
+      
+      const updatedInventoryItem = await storage.updateInventoryItem(id, req.body);
+      if (!updatedInventoryItem) {
+        return res.status(404).json({ message: "Inventory item not found" });
+      }
+      
+      res.json(updatedInventoryItem);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Stock movement routes (admin only)
+  app.get(`${apiPrefix}/stock-movements`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      const movements = await storage.getStockMovements(limit, offset);
+      res.json(movements);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get(`${apiPrefix}/stock-movements/product/:productId`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const movements = await storage.getStockMovementsByProduct(productId);
+      res.json(movements);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post(`${apiPrefix}/stock/add`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { productId, quantity, reason } = req.body;
+      
+      if (isNaN(productId) || isNaN(quantity)) {
+        return res.status(400).json({ message: "Invalid product ID or quantity" });
+      }
+      
+      const userId = (req.user as any).id;
+      const result = await storage.addStock(productId, quantity, userId, reason);
+      res.status(201).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.post(`${apiPrefix}/stock/remove`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { productId, quantity, reason } = req.body;
+      
+      if (isNaN(productId) || isNaN(quantity)) {
+        return res.status(400).json({ message: "Invalid product ID or quantity" });
+      }
+      
+      const userId = (req.user as any).id;
+      const result = await storage.removeStock(productId, quantity, userId, reason);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.post(`${apiPrefix}/stock/adjust`, requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const { productId, newQuantity, reason } = req.body;
+      
+      if (isNaN(productId) || isNaN(newQuantity)) {
+        return res.status(400).json({ message: "Invalid product ID or quantity" });
+      }
+      
+      const userId = (req.user as any).id;
+      const result = await storage.adjustStock(productId, newQuantity, userId, reason);
+      res.status(200).json(result);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

@@ -1,8 +1,10 @@
 import { 
   InsertProduct, InsertTransaction, InsertDailyStats, InsertUser, InsertExpense,
+  InsertInventory, InsertStockMovement,
   Product, Transaction, DailyStats, User, Expense,
-  TransactionType, PaymentMethod, ExpenseCategory,
-  products, transactions, dailyStats, users, expenses
+  Inventory, StockMovement,
+  TransactionType, PaymentMethod, ExpenseCategory, StockActionType,
+  products, transactions, dailyStats, users, expenses, inventory, stockMovements
 } from "@shared/schema";
 import { startOfDay, endOfDay, format, parseISO, addMonths } from "date-fns";
 import { db } from "./db";
@@ -39,6 +41,22 @@ export interface IStorage {
   updateExpense(id: number, expense: Partial<Expense>): Promise<Expense | undefined>;
   deleteExpense(id: number): Promise<boolean>;
   
+  // Inventory
+  getInventoryWithProducts(): Promise<(Inventory & { product: Product })[]>;
+  getInventoryItem(id: number): Promise<(Inventory & { product: Product }) | undefined>;
+  getInventoryItemByProductId(productId: number): Promise<Inventory | undefined>;
+  createInventoryItem(item: InsertInventory): Promise<Inventory>;
+  updateInventoryItem(id: number, item: Partial<Inventory>): Promise<Inventory | undefined>;
+  getExpiringItems(daysThreshold: number): Promise<(Inventory & { product: Product })[]>;
+  getLowStockItems(): Promise<(Inventory & { product: Product })[]>;
+  
+  // Stock movements
+  addStock(productId: number, quantity: number, userId: number, reason?: string): Promise<{ inventory: Inventory, movement: StockMovement }>;
+  removeStock(productId: number, quantity: number, userId: number, reason?: string, transactionId?: number): Promise<{ inventory: Inventory, movement: StockMovement }>;
+  adjustStock(productId: number, newQuantity: number, userId: number, reason?: string): Promise<{ inventory: Inventory, movement: StockMovement }>;
+  getStockMovements(limit?: number, offset?: number): Promise<(StockMovement & { product: Product })[]>;
+  getStockMovementsByProduct(productId: number): Promise<(StockMovement & { product: Product })[]>;
+  
   // Daily stats
   getDailyStats(date: Date): Promise<DailyStats | undefined>;
   upsertDailyStats(stats: InsertDailyStats): Promise<DailyStats>;
@@ -46,7 +64,314 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
-  // Users
+  // Inventory
+  async getInventoryWithProducts(): Promise<(Inventory & { product: Product })[]> {
+    return await db
+      .select({
+        id: inventory.id,
+        productId: inventory.productId,
+        quantity: inventory.quantity,
+        minThreshold: inventory.minThreshold,
+        expirationDate: inventory.expirationDate,
+        lastRestockDate: inventory.lastRestockDate,
+        createdAt: inventory.createdAt,
+        updatedAt: inventory.updatedAt,
+        product: products
+      })
+      .from(inventory)
+      .innerJoin(products, eq(inventory.productId, products.id))
+      .orderBy(asc(products.name));
+  }
+  
+  async getInventoryItem(id: number): Promise<(Inventory & { product: Product }) | undefined> {
+    const result = await db
+      .select({
+        id: inventory.id,
+        productId: inventory.productId,
+        quantity: inventory.quantity,
+        minThreshold: inventory.minThreshold,
+        expirationDate: inventory.expirationDate,
+        lastRestockDate: inventory.lastRestockDate,
+        createdAt: inventory.createdAt,
+        updatedAt: inventory.updatedAt,
+        product: products
+      })
+      .from(inventory)
+      .innerJoin(products, eq(inventory.productId, products.id))
+      .where(eq(inventory.id, id));
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async getInventoryItemByProductId(productId: number): Promise<Inventory | undefined> {
+    const result = await db
+      .select()
+      .from(inventory)
+      .where(eq(inventory.productId, productId));
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async createInventoryItem(item: InsertInventory): Promise<Inventory> {
+    // Make sure there's only one inventory item per product
+    const existingItem = await this.getInventoryItemByProductId(item.productId);
+    if (existingItem) {
+      throw new Error(`An inventory item for product ID ${item.productId} already exists`);
+    }
+    
+    const result = await db.insert(inventory).values({
+      ...item,
+      updatedAt: new Date() // Ensure updatedAt is set
+    }).returning();
+    
+    return result[0];
+  }
+  
+  async updateInventoryItem(id: number, item: Partial<Inventory>): Promise<Inventory | undefined> {
+    const result = await db.update(inventory)
+      .set({
+        ...item,
+        updatedAt: new Date() // Always update the updatedAt timestamp
+      })
+      .where(eq(inventory.id, id))
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async getExpiringItems(daysThreshold: number = 7): Promise<(Inventory & { product: Product })[]> {
+    const thresholdDate = new Date();
+    thresholdDate.setDate(thresholdDate.getDate() + daysThreshold);
+    
+    return await db
+      .select({
+        id: inventory.id,
+        productId: inventory.productId,
+        quantity: inventory.quantity,
+        minThreshold: inventory.minThreshold,
+        expirationDate: inventory.expirationDate,
+        lastRestockDate: inventory.lastRestockDate,
+        createdAt: inventory.createdAt,
+        updatedAt: inventory.updatedAt,
+        product: products
+      })
+      .from(inventory)
+      .innerJoin(products, eq(inventory.productId, products.id))
+      .where(and(
+        lte(inventory.expirationDate, thresholdDate),
+        gte(inventory.expirationDate, new Date()) // Only include items that haven't expired yet
+      ))
+      .orderBy(asc(inventory.expirationDate));
+  }
+  
+  async getLowStockItems(): Promise<(Inventory & { product: Product })[]> {
+    return await db
+      .select({
+        id: inventory.id,
+        productId: inventory.productId,
+        quantity: inventory.quantity,
+        minThreshold: inventory.minThreshold,
+        expirationDate: inventory.expirationDate,
+        lastRestockDate: inventory.lastRestockDate,
+        createdAt: inventory.createdAt,
+        updatedAt: inventory.updatedAt,
+        product: products
+      })
+      .from(inventory)
+      .innerJoin(products, eq(inventory.productId, products.id))
+      .where(lte(inventory.quantity, inventory.minThreshold))
+      .orderBy(asc(inventory.quantity));
+  }
+  
+  // Stock movements
+  async addStock(
+    productId: number, 
+    quantity: number, 
+    userId: number, 
+    reason?: string
+  ): Promise<{ inventory: Inventory, movement: StockMovement }> {
+    if (quantity <= 0) {
+      throw new Error("Quantity must be positive when adding stock");
+    }
+    
+    // Get the inventory item or create it if it doesn't exist
+    let invItem = await this.getInventoryItemByProductId(productId);
+    if (!invItem) {
+      invItem = await this.createInventoryItem({
+        productId,
+        quantity: 0,
+        minThreshold: 5,
+        lastRestockDate: new Date()
+      });
+    }
+    
+    // Update the inventory item
+    const updatedInv = await this.updateInventoryItem(invItem.id, {
+      quantity: invItem.quantity + quantity,
+      lastRestockDate: new Date()
+    });
+    
+    if (!updatedInv) {
+      throw new Error(`Failed to update inventory for product ID ${productId}`);
+    }
+    
+    // Record the stock movement
+    const movement = await db.insert(stockMovements).values({
+      inventoryId: invItem.id,
+      productId,
+      quantity,
+      actionType: "add",
+      reason,
+      performedById: userId
+    }).returning();
+    
+    return {
+      inventory: updatedInv,
+      movement: movement[0]
+    };
+  }
+  
+  async removeStock(
+    productId: number, 
+    quantity: number, 
+    userId: number, 
+    reason?: string,
+    transactionId?: number
+  ): Promise<{ inventory: Inventory, movement: StockMovement }> {
+    if (quantity <= 0) {
+      throw new Error("Quantity must be positive when removing stock");
+    }
+    
+    // Get the inventory item
+    const invItem = await this.getInventoryItemByProductId(productId);
+    if (!invItem) {
+      throw new Error(`No inventory item found for product ID ${productId}`);
+    }
+    
+    // Make sure there's enough stock
+    if (invItem.quantity < quantity) {
+      throw new Error(`Not enough stock for product ID ${productId}. Available: ${invItem.quantity}, Requested: ${quantity}`);
+    }
+    
+    // Update the inventory item
+    const updatedInv = await this.updateInventoryItem(invItem.id, {
+      quantity: invItem.quantity - quantity
+    });
+    
+    if (!updatedInv) {
+      throw new Error(`Failed to update inventory for product ID ${productId}`);
+    }
+    
+    // Record the stock movement
+    const movement = await db.insert(stockMovements).values({
+      inventoryId: invItem.id,
+      productId,
+      quantity: -quantity, // Negative for removal
+      actionType: "remove",
+      reason,
+      performedById: userId,
+      transactionId
+    }).returning();
+    
+    return {
+      inventory: updatedInv,
+      movement: movement[0]
+    };
+  }
+  
+  async adjustStock(
+    productId: number, 
+    newQuantity: number, 
+    userId: number, 
+    reason?: string
+  ): Promise<{ inventory: Inventory, movement: StockMovement }> {
+    if (newQuantity < 0) {
+      throw new Error("New quantity cannot be negative");
+    }
+    
+    // Get the inventory item or create it if it doesn't exist
+    let invItem = await this.getInventoryItemByProductId(productId);
+    if (!invItem) {
+      invItem = await this.createInventoryItem({
+        productId,
+        quantity: 0,
+        minThreshold: 5,
+        lastRestockDate: new Date()
+      });
+    }
+    
+    const quantityChange = newQuantity - invItem.quantity;
+    
+    // Update the inventory item
+    const updatedInv = await this.updateInventoryItem(invItem.id, {
+      quantity: newQuantity,
+      ...(quantityChange > 0 ? { lastRestockDate: new Date() } : {})
+    });
+    
+    if (!updatedInv) {
+      throw new Error(`Failed to update inventory for product ID ${productId}`);
+    }
+    
+    // Record the stock movement
+    const movement = await db.insert(stockMovements).values({
+      inventoryId: invItem.id,
+      productId,
+      quantity: quantityChange,
+      actionType: "adjust",
+      reason,
+      performedById: userId
+    }).returning();
+    
+    return {
+      inventory: updatedInv,
+      movement: movement[0]
+    };
+  }
+  
+  async getStockMovements(limit?: number, offset = 0): Promise<(StockMovement & { product: Product })[]> {
+    const query = db
+      .select({
+        id: stockMovements.id,
+        inventoryId: stockMovements.inventoryId,
+        productId: stockMovements.productId,
+        quantity: stockMovements.quantity,
+        actionType: stockMovements.actionType,
+        reason: stockMovements.reason,
+        transactionId: stockMovements.transactionId,
+        performedById: stockMovements.performedById,
+        timestamp: stockMovements.timestamp,
+        product: products
+      })
+      .from(stockMovements)
+      .innerJoin(products, eq(stockMovements.productId, products.id))
+      .orderBy(desc(stockMovements.timestamp));
+    
+    if (limit) {
+      query.limit(limit).offset(offset);
+    }
+    
+    return await query;
+  }
+  
+  async getStockMovementsByProduct(productId: number): Promise<(StockMovement & { product: Product })[]> {
+    return await db
+      .select({
+        id: stockMovements.id,
+        inventoryId: stockMovements.inventoryId,
+        productId: stockMovements.productId,
+        quantity: stockMovements.quantity,
+        actionType: stockMovements.actionType,
+        reason: stockMovements.reason,
+        transactionId: stockMovements.transactionId,
+        performedById: stockMovements.performedById,
+        timestamp: stockMovements.timestamp,
+        product: products
+      })
+      .from(stockMovements)
+      .innerJoin(products, eq(stockMovements.productId, products.id))
+      .where(eq(stockMovements.productId, productId))
+      .orderBy(desc(stockMovements.timestamp));
+  }
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users);
   }
