@@ -1,14 +1,22 @@
 import { 
-  InsertProduct, InsertTransaction, InsertDailyStats,
-  Product, Transaction, DailyStats,
-  TransactionType, PaymentMethod,
-  products, transactions, dailyStats
+  InsertProduct, InsertTransaction, InsertDailyStats, InsertUser, InsertExpense,
+  Product, Transaction, DailyStats, User, Expense,
+  TransactionType, PaymentMethod, ExpenseCategory,
+  products, transactions, dailyStats, users, expenses
 } from "@shared/schema";
 import { startOfDay, endOfDay, format, parseISO, addMonths } from "date-fns";
 import { db } from "./db";
 import { eq, gte, lte, desc, and, asc } from "drizzle-orm";
 
 export interface IStorage {
+  // Users
+  getAllUsers(): Promise<User[]>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
+  
   // Products
   getAllProducts(): Promise<Product[]>;
   getProduct(id: number): Promise<Product | undefined>;
@@ -22,6 +30,15 @@ export interface IStorage {
   getTransaction(id: number): Promise<Transaction | undefined>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   
+  // Expenses
+  getAllExpenses(): Promise<Expense[]>;
+  getExpensesByDateRange(startDate: Date, endDate: Date): Promise<Expense[]>;
+  getExpensesByCategory(category: ExpenseCategory): Promise<Expense[]>;
+  getExpense(id: number): Promise<Expense | undefined>;
+  createExpense(expense: InsertExpense): Promise<Expense>;
+  updateExpense(id: number, expense: Partial<Expense>): Promise<Expense | undefined>;
+  deleteExpense(id: number): Promise<boolean>;
+  
   // Daily stats
   getDailyStats(date: Date): Promise<DailyStats | undefined>;
   upsertDailyStats(stats: InsertDailyStats): Promise<DailyStats>;
@@ -29,6 +46,87 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Users
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+  
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+  
+  async updateUser(id: number, user: Partial<User>): Promise<User | undefined> {
+    const result = await db.update(users)
+      .set(user)
+      .where(eq(users.id, id))
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async deleteUser(id: number): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id)).returning({ id: users.id });
+    return result.length > 0;
+  }
+  
+  // Expenses
+  async getAllExpenses(): Promise<Expense[]> {
+    return await db.select().from(expenses).orderBy(desc(expenses.date));
+  }
+  
+  async getExpensesByDateRange(startDate: Date, endDate: Date): Promise<Expense[]> {
+    const start = startOfDay(startDate);
+    const end = endOfDay(endDate);
+    
+    return await db.select()
+      .from(expenses)
+      .where(and(
+        gte(expenses.date, start),
+        lte(expenses.date, end)
+      ))
+      .orderBy(desc(expenses.date));
+  }
+  
+  async getExpensesByCategory(category: ExpenseCategory): Promise<Expense[]> {
+    return await db.select()
+      .from(expenses)
+      .where(eq(expenses.category, category))
+      .orderBy(desc(expenses.date));
+  }
+  
+  async getExpense(id: number): Promise<Expense | undefined> {
+    const result = await db.select().from(expenses).where(eq(expenses.id, id));
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async createExpense(expense: InsertExpense): Promise<Expense> {
+    const result = await db.insert(expenses).values(expense).returning();
+    return result[0];
+  }
+  
+  async updateExpense(id: number, expense: Partial<Expense>): Promise<Expense | undefined> {
+    const result = await db.update(expenses)
+      .set(expense)
+      .where(eq(expenses.id, id))
+      .returning();
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async deleteExpense(id: number): Promise<boolean> {
+    const result = await db.delete(expenses).where(eq(expenses.id, id)).returning({ id: expenses.id });
+    return result.length > 0;
+  }
+  
   // Products
   async getAllProducts(): Promise<Product[]> {
     return await db.select().from(products);
@@ -221,6 +319,24 @@ export class DatabaseStorage implements IStorage {
       for (const product of defaultProducts) {
         await this.createProduct(product);
       }
+    }
+  }
+  
+  // Initialize default admin user if no users exist in the database
+  async initializeDefaultAdminIfNeeded(hashPasswordFn: (password: string) => Promise<string>): Promise<void> {
+    const existingUsers = await this.getAllUsers();
+    
+    if (existingUsers.length === 0) {
+      // Create default admin user
+      const defaultAdmin: InsertUser = {
+        username: "admin",
+        password: await hashPasswordFn("admin"), // Default password is "admin"
+        role: "admin",
+        fullName: "Administrator",
+      };
+      
+      await this.createUser(defaultAdmin);
+      console.log("Default admin user created with username: admin and password: admin");
     }
   }
 }

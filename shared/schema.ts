@@ -2,16 +2,27 @@ import { pgTable, text, serial, integer, timestamp, boolean, json, unique } from
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// User roles
+export const USER_ROLES = ["admin", "cashier"] as const;
+export type UserRole = typeof USER_ROLES[number];
+
 // Base user schema
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role", { enum: USER_ROLES }).notNull().default("cashier"),
+  fullName: text("full_name"),
+  email: text("email"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  role: true,
+  fullName: true,
+  email: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -122,3 +133,40 @@ export const insertDailyStatsSchema = createInsertSchema(dailyStats).omit({
 
 export type InsertDailyStats = z.infer<typeof insertDailyStatsSchema>;
 export type DailyStats = typeof dailyStats.$inferSelect;
+
+// Expense categories
+export const EXPENSE_CATEGORIES = ["rent", "wifi", "electricity", "water", "supplies", "maintenance", "other"] as const;
+export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
+
+// Expenses
+export const expenses = pgTable("expenses", {
+  id: serial("id").primaryKey(),
+  date: timestamp("date").notNull().defaultNow(),
+  amount: integer("amount").notNull(), // Amount in DH
+  category: text("category", { enum: EXPENSE_CATEGORIES }).notNull(),
+  description: text("description"),
+  paymentMethod: text("payment_method", { enum: PAYMENT_METHODS }).notNull(),
+  createdById: integer("created_by_id").references(() => users.id),
+});
+
+export const insertExpenseSchema = createInsertSchema(expenses).omit({
+  id: true,
+}).extend({
+  date: z.union([
+    z.date(),
+    z.string().transform((str) => {
+      try {
+        return new Date(str);
+      } catch (error) {
+        console.error("Error parsing date:", str, error);
+        return new Date(); // Fallback to current date
+      }
+    })
+  ]),
+  category: z.enum(EXPENSE_CATEGORIES),
+  paymentMethod: z.enum(PAYMENT_METHODS),
+  description: z.string().optional(),
+});
+
+export type InsertExpense = z.infer<typeof insertExpenseSchema>;
+export type Expense = typeof expenses.$inferSelect;

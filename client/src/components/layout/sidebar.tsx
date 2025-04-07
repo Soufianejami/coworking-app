@@ -8,12 +8,31 @@ import {
   CalendarIcon,
   BarChart3,
   User,
+  LogOut,
+  Users,
+  DollarSign,
+  Loader2,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { UserRole } from "@shared/schema";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Fragment } from "react";
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const { user, logoutMutation } = useAuth();
+  
+  const isAdmin = user?.role === "admin";
 
-  const navItems = [
+  const commonNavItems = [
     {
       name: "Tableau de bord",
       href: "/",
@@ -44,12 +63,37 @@ export default function Sidebar() {
       href: "/reports",
       icon: BarChart3,
     },
+    {
+      name: "Dépenses",
+      href: "/expenses",
+      icon: DollarSign,
+    },
+  ];
+  
+  // Admin-only navigation items
+  const adminNavItems = [
+    {
+      name: "Utilisateurs",
+      href: "/users",
+      icon: Users,
+      requiresAdmin: true,
+    },
+  ];
+  
+  // Combine navigation items based on user role
+  const navItems = [
+    ...commonNavItems,
+    ...(isAdmin ? adminNavItems : []),
   ];
 
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
+
   return (
-    <aside className="bg-white shadow-md border-r border-gray-200 hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 z-10">
-      <div className="px-6 pt-8 pb-4 flex items-center border-b border-gray-200">
-        <h1 className="text-2xl font-semibold text-gray-800">CoworkCaisse</h1>
+    <aside className="bg-background shadow-md border-r border-border hidden md:flex md:flex-col md:w-64 md:fixed md:inset-y-0 z-10">
+      <div className="px-6 pt-8 pb-4 flex items-center border-b border-border">
+        <h1 className="text-2xl font-semibold">CoworkCaisse</h1>
       </div>
       <nav className="flex-1 px-4 pt-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
@@ -61,8 +105,8 @@ export default function Sidebar() {
               className={cn(
                 "flex items-center px-4 py-3 text-sm font-medium rounded-md",
                 isActive
-                  ? "text-white bg-primary"
-                  : "text-gray-700 hover:bg-gray-100"
+                  ? "text-primary-foreground bg-primary"
+                  : "text-foreground hover:bg-accent"
               )}
             >
               <item.icon className="h-5 w-5 mr-3" />
@@ -71,16 +115,39 @@ export default function Sidebar() {
           );
         })}
       </nav>
-      <div className="px-6 py-4 border-t border-gray-200">
-        <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-10">
-            <User className="h-10 w-10 p-1 rounded-full bg-gray-100 text-gray-600" />
-          </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-gray-700">Admin</p>
-            <p className="text-xs font-medium text-gray-500">Paramètres</p>
-          </div>
-        </div>
+      <div className="px-6 py-4 border-t border-border">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="w-full flex items-center justify-start p-0 hover:bg-transparent">
+              <div className="flex items-center w-full">
+                <div className="flex-shrink-0 h-10 w-10">
+                  <User className="h-10 w-10 p-1 rounded-full bg-muted text-muted-foreground" />
+                </div>
+                <div className="ml-3 text-left">
+                  <p className="text-sm font-medium">{user?.fullName || user?.username}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                </div>
+              </div>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleLogout} disabled={logoutMutation.isPending}>
+              {logoutMutation.isPending ? (
+                <Fragment>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <span>Déconnexion en cours...</span>
+                </Fragment>
+              ) : (
+                <Fragment>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Se déconnecter</span>
+                </Fragment>
+              )}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   );
