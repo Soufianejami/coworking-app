@@ -85,7 +85,8 @@ export default function TransactionForm({ open, onOpenChange }: TransactionFormP
         type: transactionType,
         paymentMethod,
         notes: notes || undefined,
-        date: new Date(),
+        // Convert date to ISO string for consistent serialization
+        date: new Date().toISOString(),
       } as any;
       
       if (transactionType === "entry") {
@@ -95,8 +96,9 @@ export default function TransactionForm({ open, onOpenChange }: TransactionFormP
         data.amount = 300; // Fixed price for subscription
         data.clientName = subscriberName;
         data.clientEmail = subscriberEmail || undefined;
+        // Use subscription start date if provided
         const startDate = new Date(subscriptionStart);
-        data.date = startDate;
+        data.date = startDate.toISOString();
         // Don't set the subscription end date directly - let the backend handle it
       } else if (transactionType === "cafe") {
         data.amount = orderTotal;

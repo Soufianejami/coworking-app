@@ -63,6 +63,9 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
 }).extend({
   type: z.enum(TRANSACTION_TYPES),
   paymentMethod: z.enum(PAYMENT_METHODS),
+  // Fix date validation to accept both Date objects and strings
+  date: z.union([z.string(), z.date()]),
+  subscriptionEndDate: z.union([z.string(), z.date()]).optional(),
   // Make some fields optional to fix validation errors
   clientName: z.string().optional(),
   clientEmail: z.string().optional(),
