@@ -133,6 +133,7 @@ export default function StockPage() {
     minThreshold: "5",
     purchasePrice: "",
     expirationDate: "",
+    newProductName: "", // Nouveau champ pour stocker le nom d'un nouveau produit
   });
 
   // Query for inventory items
@@ -198,6 +199,8 @@ export default function StockPage() {
     (product) => 
       !inventoryItems.some((item) => item.productId === product.id)
   );
+  
+  // Le bouton Nouveau Produit est toujours activé, mais le comportement change
 
   // Add stock mutation
   const addStockMutation = useMutation({
@@ -297,7 +300,7 @@ export default function StockPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/expiring"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });  // Pour mettre à jour la liste des produits
       setIsCreateInventoryOpen(false);
-      setInventoryForm({ productId: "", minThreshold: "5", purchasePrice: "", expirationDate: "" });
+      setInventoryForm({ productId: "", minThreshold: "5", purchasePrice: "", expirationDate: "", newProductName: "" });
       toast({
         title: "Produit ajouté",
         description: "Le produit a été ajouté à l'inventaire et est maintenant disponible dans le menu.",
@@ -365,14 +368,50 @@ export default function StockPage() {
     });
   };
 
+  // Create product mutation
+  const createProductMutation = useMutation({
+    mutationFn: async (data: { name: string; category: string; price: number }) => {
+      const res = await apiRequest("POST", "/api/products", data);
+      return await res.json();
+    },
+    onSuccess: (newProduct) => {
+      // Une fois le produit créé, on crée l'inventaire
+      createInventoryMutation.mutate({
+        productId: newProduct.id,
+        minThreshold: parseInt(inventoryForm.minThreshold),
+        ...(inventoryForm.purchasePrice ? { purchasePrice: parseInt(inventoryForm.purchasePrice) } : {}),
+        ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : {}),
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erreur lors de la création du produit",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateInventory = (e: React.FormEvent) => {
     e.preventDefault();
-    createInventoryMutation.mutate({
-      productId: parseInt(inventoryForm.productId),
-      minThreshold: parseInt(inventoryForm.minThreshold),
-      ...(inventoryForm.purchasePrice ? { purchasePrice: parseInt(inventoryForm.purchasePrice) } : {}),
-      ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : {}),
-    });
+    
+    // Si c'est un nouveau produit (productId = "-1")
+    if (inventoryForm.productId === "-1" && inventoryForm.newProductName) {
+      // Créer d'abord le produit, puis l'inventaire sera créé dans le onSuccess
+      createProductMutation.mutate({
+        name: inventoryForm.newProductName,
+        category: "beverage", // Toujours catégorie de boisson
+        price: 0, // Prix de vente à 0, sera défini dans la page de produits
+      });
+    } else {
+      // Produit existant, créer directement l'inventaire
+      createInventoryMutation.mutate({
+        productId: parseInt(inventoryForm.productId),
+        minThreshold: parseInt(inventoryForm.minThreshold),
+        ...(inventoryForm.purchasePrice ? { purchasePrice: parseInt(inventoryForm.purchasePrice) } : {}),
+        ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : {}),
+      });
+    }
   };
 
   const handleUpdateInventory = (e: React.FormEvent) => {
@@ -398,6 +437,7 @@ export default function StockPage() {
       expirationDate: item.expirationDate 
         ? format(new Date(item.expirationDate), 'yyyy-MM-dd')
         : '',
+      newProductName: '', // Initialiser le nouveau champ à vide
     });
     setIsUpdateInventoryOpen(true);
   };
@@ -427,7 +467,7 @@ export default function StockPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsCreateInventoryOpen(true)} disabled={productsWithoutInventory.length === 0}>
+          <Button variant="outline" onClick={() => setIsCreateInventoryOpen(true)}>
             <PlusCircle className="h-4 w-4 mr-2" />
             Nouveau Produit
           </Button>
@@ -1076,22 +1116,53 @@ export default function StockPage() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="productId">Produit</Label>
-                <select
-                  id="productId"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={inventoryForm.productId}
-                  onChange={(e) =>
-                    setInventoryForm({ ...inventoryForm, productId: e.target.value })
-                  }
-                  required
-                >
-                  <option value="">Sélectionner un produit</option>
-                  {productsWithoutInventory.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="grid grid-cols-1 gap-2">
+                  {/* Option 1: Sélectionner un produit existant */}
+                  {productsWithoutInventory.length > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <select
+                        id="productId"
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        value={inventoryForm.productId}
+                        onChange={(e) =>
+                          setInventoryForm({ ...inventoryForm, productId: e.target.value })
+                        }
+                      >
+                        <option value="">-- Sélectionner un produit existant --</option>
+                        {productsWithoutInventory.map((product) => (
+                          <option key={product.id} value={product.id}>
+                            {product.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  
+                  {/* Option 2: Nouveau produit */}
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="newProduct"
+                      placeholder="Ou entrez le nom d'un nouveau produit"
+                      value={inventoryForm.productId === "-1" ? inventoryForm.newProductName || "" : ""}
+                      onChange={(e) => {
+                        // Si l'utilisateur commence à taper, on met productId à -1 (nouveau produit)
+                        if (e.target.value) {
+                          setInventoryForm({ 
+                            ...inventoryForm, 
+                            productId: "-1", 
+                            newProductName: e.target.value 
+                          });
+                        } else {
+                          setInventoryForm({ 
+                            ...inventoryForm, 
+                            productId: "", 
+                            newProductName: "" 
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="minThreshold">Seuil d'alerte minimum</Label>
