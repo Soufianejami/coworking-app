@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { apiRequest } from "@/lib/queryClient";
 import CafeMenu from "@/components/cafe/cafe-menu";
+import { Product } from "@shared/schema";
 
 interface TransactionFormProps {
   open?: boolean;
@@ -63,7 +64,7 @@ export default function TransactionForm({ open, onOpenChange }: TransactionFormP
   }, [transactionType]);
   
   // Fetch products for cafe menu
-  const { data: products } = useQuery({
+  const { data: products } = useQuery<Product[]>({
     queryKey: ["/api/products"],
     enabled: transactionType === "cafe",
   });
@@ -96,7 +97,7 @@ export default function TransactionForm({ open, onOpenChange }: TransactionFormP
         data.clientEmail = subscriberEmail || undefined;
         const startDate = new Date(subscriptionStart);
         data.date = startDate;
-        data.subscriptionEndDate = new Date(startDate.setMonth(startDate.getMonth() + 1));
+        // Don't set the subscription end date directly - let the backend handle it
       } else if (transactionType === "cafe") {
         data.amount = orderTotal;
         data.clientName = clientName || undefined;
@@ -108,6 +109,7 @@ export default function TransactionForm({ open, onOpenChange }: TransactionFormP
         }));
       }
       
+      console.log("Sending transaction data:", data);
       return apiRequest("POST", "/api/transactions", data);
     },
     onSuccess: () => {
@@ -128,10 +130,11 @@ export default function TransactionForm({ open, onOpenChange }: TransactionFormP
         setIsOpen(false);
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error("Transaction error:", error);
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue. Veuillez réessayer.",
+        description: error?.message || "Une erreur est survenue. Veuillez réessayer.",
         variant: "destructive",
       });
     },
@@ -281,7 +284,7 @@ export default function TransactionForm({ open, onOpenChange }: TransactionFormP
                 Produits
               </label>
               <CafeMenu
-                products={products || []}
+                products={Array.isArray(products) ? products : []}
                 selectedItems={selectedItems}
                 setSelectedItems={setSelectedItems}
               />

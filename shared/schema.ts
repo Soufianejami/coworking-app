@@ -63,6 +63,11 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
 }).extend({
   type: z.enum(TRANSACTION_TYPES),
   paymentMethod: z.enum(PAYMENT_METHODS),
+  // Make some fields optional to fix validation errors
+  clientName: z.string().optional(),
+  clientEmail: z.string().optional(),
+  notes: z.string().optional(),
+  items: z.any().optional(), // Allow any type for items JSON
 });
 
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
