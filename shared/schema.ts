@@ -63,9 +63,32 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
 }).extend({
   type: z.enum(TRANSACTION_TYPES),
   paymentMethod: z.enum(PAYMENT_METHODS),
-  // Fix date validation to accept both Date objects and strings
-  date: z.union([z.string(), z.date()]),
-  subscriptionEndDate: z.union([z.string(), z.date()]).optional(),
+  // Fix date validation to accept both Date objects and strings with proper transformation
+  date: z.union([
+    z.date(),
+    z.string().transform((str) => {
+      try {
+        return new Date(str);
+      } catch (error) {
+        console.error("Error parsing date:", str, error);
+        return new Date(); // Fallback to current date
+      }
+    })
+  ]),
+  subscriptionEndDate: z.union([
+    z.date(),
+    z.string().transform((str) => {
+      try {
+        return new Date(str);
+      } catch (error) {
+        console.error("Error parsing subscription end date:", str, error);
+        // Return a date 30 days from now as fallback
+        const date = new Date();
+        date.setDate(date.getDate() + 30);
+        return date;
+      }
+    })
+  ]).optional(),
   // Make some fields optional to fix validation errors
   clientName: z.string().optional(),
   clientEmail: z.string().optional(),

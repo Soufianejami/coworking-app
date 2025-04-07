@@ -85,8 +85,8 @@ export default function TransactionForm({ open, onOpenChange }: TransactionFormP
         type: transactionType,
         paymentMethod,
         notes: notes || undefined,
-        // Convert date to ISO string for consistent serialization
-        date: new Date().toISOString(),
+        // Use a string date format directly
+        date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"),
       } as any;
       
       if (transactionType === "entry") {
@@ -97,9 +97,15 @@ export default function TransactionForm({ open, onOpenChange }: TransactionFormP
         data.clientName = subscriberName;
         data.clientEmail = subscriberEmail || undefined;
         // Use subscription start date if provided
-        const startDate = new Date(subscriptionStart);
-        data.date = startDate.toISOString();
-        // Don't set the subscription end date directly - let the backend handle it
+        try {
+          const startDate = new Date(subscriptionStart);
+          // Format the date as a string in ISO format
+          data.date = format(startDate, "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        } catch (error) {
+          console.error("Error formatting date:", error);
+          // Use current date as fallback
+          data.date = format(new Date(), "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        }
       } else if (transactionType === "cafe") {
         data.amount = orderTotal;
         data.clientName = clientName || undefined;

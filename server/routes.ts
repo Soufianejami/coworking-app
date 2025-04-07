@@ -123,10 +123,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post(`${apiPrefix}/transactions`, async (req: Request, res: Response) => {
     try {
+      console.log("Received transaction data:", req.body);
+      // Parse the transaction data with our schema
       const transactionData = insertTransactionSchema.parse(req.body);
+      
+      // Create the transaction
       const newTransaction = await storage.createTransaction(transactionData);
       res.status(201).json(newTransaction);
     } catch (error: any) {
+      console.error("Transaction creation error:", error);
       res.status(400).json({ message: error.message });
     }
   });
