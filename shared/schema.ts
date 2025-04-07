@@ -181,6 +181,7 @@ export const inventory = pgTable("inventory", {
   productId: integer("product_id").notNull().references(() => products.id),
   quantity: integer("quantity").notNull().default(0),
   minThreshold: integer("min_threshold").notNull().default(5), // Alert threshold
+  purchasePrice: integer("purchase_price"), // Purchase price in DH (dirhams)
   expirationDate: timestamp("expiration_date"), // Can be null for items without expiration
   lastRestockDate: timestamp("last_restock_date").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -192,6 +193,7 @@ export const insertInventorySchema = createInsertSchema(inventory).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
+  purchasePrice: z.number().int().min(0).optional(),
   expirationDate: z.union([
     z.date(),
     z.string().transform((str) => {

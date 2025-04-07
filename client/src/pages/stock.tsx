@@ -78,6 +78,7 @@ type InventoryItem = {
   productId: number;
   quantity: number;
   minThreshold: number;
+  purchasePrice: number | null;
   expirationDate: string | null;
   lastRestockDate: string;
   createdAt: string;
@@ -130,6 +131,7 @@ export default function StockPage() {
   const [inventoryForm, setInventoryForm] = useState({
     productId: "",
     minThreshold: "5",
+    purchasePrice: "",
     expirationDate: "",
   });
 
@@ -280,7 +282,12 @@ export default function StockPage() {
 
   // Create inventory mutation
   const createInventoryMutation = useMutation({
-    mutationFn: async (data: { productId: number; minThreshold: number; expirationDate?: string }) => {
+    mutationFn: async (data: { 
+      productId: number; 
+      minThreshold: number; 
+      purchasePrice?: number;
+      expirationDate?: string 
+    }) => {
       const res = await apiRequest("POST", "/api/inventory", data);
       return await res.json();
     },
@@ -289,7 +296,7 @@ export default function StockPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/low-stock"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/expiring"] });
       setIsCreateInventoryOpen(false);
-      setInventoryForm({ productId: "", minThreshold: "5", expirationDate: "" });
+      setInventoryForm({ productId: "", minThreshold: "5", purchasePrice: "", expirationDate: "" });
       toast({
         title: "Inventaire créé",
         description: "Le nouvel élément d'inventaire a été créé avec succès.",
@@ -362,6 +369,7 @@ export default function StockPage() {
     createInventoryMutation.mutate({
       productId: parseInt(inventoryForm.productId),
       minThreshold: parseInt(inventoryForm.minThreshold),
+      ...(inventoryForm.purchasePrice ? { purchasePrice: parseInt(inventoryForm.purchasePrice) } : {}),
       ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : {}),
     });
   };
@@ -373,6 +381,7 @@ export default function StockPage() {
     const formData = {
       id: selectedItem.id,
       minThreshold: parseInt(inventoryForm.minThreshold),
+      ...(inventoryForm.purchasePrice ? { purchasePrice: parseInt(inventoryForm.purchasePrice) } : {}),
       ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : { expirationDate: null }),
     };
 
@@ -384,6 +393,7 @@ export default function StockPage() {
     setInventoryForm({
       productId: item.productId.toString(),
       minThreshold: item.minThreshold.toString(),
+      purchasePrice: item.purchasePrice ? item.purchasePrice.toString() : '',
       expirationDate: item.expirationDate 
         ? format(new Date(item.expirationDate), 'yyyy-MM-dd')
         : '',
@@ -520,6 +530,7 @@ export default function StockPage() {
                         <TableHead>Produit</TableHead>
                         <TableHead>Stock actuel</TableHead>
                         <TableHead>Seuil d'alerte</TableHead>
+                        <TableHead>Prix d'achat</TableHead>
                         <TableHead>Péremption</TableHead>
                         <TableHead>Dernier ajout</TableHead>
                         <TableHead>Actions</TableHead>
@@ -539,6 +550,13 @@ export default function StockPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>{item.minThreshold} unités</TableCell>
+                          <TableCell>
+                            {item.purchasePrice ? (
+                              <span>{item.purchasePrice} DH</span>
+                            ) : (
+                              <span className="text-gray-400">Non défini</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             {item.expirationDate ? (
                               <span className={
@@ -1083,6 +1101,20 @@ export default function StockPage() {
                 />
               </div>
               <div className="grid gap-2">
+                <Label htmlFor="purchasePrice">Prix d'achat (en DH)</Label>
+                <Input
+                  id="purchasePrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Prix d'achat unitaire"
+                  value={inventoryForm.purchasePrice}
+                  onChange={(e) =>
+                    setInventoryForm({ ...inventoryForm, purchasePrice: e.target.value })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
                 <Label htmlFor="expirationDate">Date de péremption (optionnel)</Label>
                 <Input
                   id="expirationDate"
@@ -1128,6 +1160,20 @@ export default function StockPage() {
                     setInventoryForm({ ...inventoryForm, minThreshold: e.target.value })
                   }
                   required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="purchasePrice">Prix d'achat (en DH)</Label>
+                <Input
+                  id="purchasePrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Prix d'achat unitaire"
+                  value={inventoryForm.purchasePrice}
+                  onChange={(e) =>
+                    setInventoryForm({ ...inventoryForm, purchasePrice: e.target.value })
+                  }
                 />
               </div>
               <div className="grid gap-2">
