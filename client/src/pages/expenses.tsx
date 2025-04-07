@@ -291,366 +291,364 @@ export default function ExpensesPage() {
   const sortedMonths = Object.keys(expensesByMonth).sort((a, b) => b.localeCompare(a));
 
   return (
-    <MainLayout>
-      <div className="container py-6">
-        <Card className="mb-6">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Gestion des Dépenses</CardTitle>
-              <CardDescription>
-                Suivez et gérez les dépenses mensuelles de votre espace de coworking
-              </CardDescription>
-            </div>
-            {isAdmin && (
-              <Button onClick={() => setOpenCreateDialog(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Nouvelle Dépense
-              </Button>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Total des Dépenses
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Loyer & Services
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(
-                      expenses
-                        .filter((e) => ["rent", "electricity", "water", "wifi"].includes(e.category))
-                        .reduce((sum, e) => sum + Number(e.amount), 0)
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Fournitures & Maintenance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {formatCurrency(
-                      expenses
-                        .filter((e) => ["supplies", "maintenance", "other"].includes(e.category))
-                        .reduce((sum, e) => sum + Number(e.amount), 0)
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+    <div className="container py-6">
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Gestion des Dépenses</CardTitle>
+            <CardDescription>
+              Suivez et gérez les dépenses mensuelles de votre espace de coworking
+            </CardDescription>
+          </div>
+          {isAdmin && (
+            <Button onClick={() => setOpenCreateDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Nouvelle Dépense
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total des Dépenses
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Loyer & Services
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(
+                    expenses
+                      .filter((e) => ["rent", "electricity", "water", "wifi"].includes(e.category))
+                      .reduce((sum, e) => sum + Number(e.amount), 0)
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Fournitures & Maintenance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(
+                    expenses
+                      .filter((e) => ["supplies", "maintenance", "other"].includes(e.category))
+                      .reduce((sum, e) => sum + Number(e.amount), 0)
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Expenses by Month */}
+      {isLoading ? (
+        <div className="flex justify-center p-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : expenses.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-8 text-muted-foreground">
+            Aucune dépense enregistrée
           </CardContent>
         </Card>
+      ) : (
+        sortedMonths.map((month) => {
+          const monthExpenses = expensesByMonth[month];
+          const monthTotal = monthExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+          const [year, monthNum] = month.split("-");
+          const monthName = new Date(parseInt(year), parseInt(monthNum) - 1, 1).toLocaleDateString(
+            "fr-FR",
+            { month: "long", year: "numeric" }
+          );
 
-        {/* Expenses by Month */}
-        {isLoading ? (
-          <div className="flex justify-center p-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : expenses.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-8 text-muted-foreground">
-              Aucune dépense enregistrée
-            </CardContent>
-          </Card>
-        ) : (
-          sortedMonths.map((month) => {
-            const monthExpenses = expensesByMonth[month];
-            const monthTotal = monthExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-            const [year, monthNum] = month.split("-");
-            const monthName = new Date(parseInt(year), parseInt(monthNum) - 1, 1).toLocaleDateString(
-              "fr-FR",
-              { month: "long", year: "numeric" }
-            );
-
-            return (
-              <Card key={month} className="mb-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Calendar className="h-5 w-5 mr-2" />
-                    <span className="capitalize">{monthName}</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Total: {formatCurrency(monthTotal)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Catégorie</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="text-right">Montant</TableHead>
-                        {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+          return (
+            <Card key={month} className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  <span className="capitalize">{monthName}</span>
+                </CardTitle>
+                <CardDescription>
+                  Total: {formatCurrency(monthTotal)}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Montant</TableHead>
+                      {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {monthExpenses.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell>{formatDate(expense.date, "dd/MM/yyyy")}</TableCell>
+                        <TableCell>
+                          <Badge variant={getCategoryBadgeVariant(expense.category) as any}>
+                            {getCategoryName(expense.category)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{expense.description || "-"}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(Number(expense.amount))}
+                        </TableCell>
+                        {isAdmin && (
+                          <TableCell className="text-right space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditExpense(expense)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Êtes-vous sûr de vouloir supprimer cette dépense ?
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Cette action est irréversible.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteExpense(expense.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Supprimer
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </TableCell>
+                        )}
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {monthExpenses.map((expense) => (
-                        <TableRow key={expense.id}>
-                          <TableCell>{formatDate(expense.date, "dd/MM/yyyy")}</TableCell>
-                          <TableCell>
-                            <Badge variant={getCategoryBadgeVariant(expense.category) as any}>
-                              {getCategoryName(expense.category)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{expense.description || "-"}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(Number(expense.amount))}
-                          </TableCell>
-                          {isAdmin && (
-                            <TableCell className="text-right space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEditExpense(expense)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="outline" size="sm">
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      Êtes-vous sûr de vouloir supprimer cette dépense ?
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Cette action est irréversible.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDeleteExpense(expense.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Supprimer
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            );
-          })
-        )}
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          );
+        })
+      )}
 
-        {/* Create Expense Dialog */}
-        <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Créer une nouvelle dépense</DialogTitle>
-              <DialogDescription>
-                Ajoutez les détails de la nouvelle dépense
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...createForm}>
-              <form onSubmit={createForm.handleSubmit(onCreateExpense)} className="space-y-4">
-                <FormField
-                  control={createForm.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Catégorie</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une catégorie" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="rent">Loyer</SelectItem>
-                          <SelectItem value="electricity">Électricité</SelectItem>
-                          <SelectItem value="water">Eau</SelectItem>
-                          <SelectItem value="wifi">Internet</SelectItem>
-                          <SelectItem value="supplies">Fournitures</SelectItem>
-                          <SelectItem value="maintenance">Maintenance</SelectItem>
-                          <SelectItem value="other">Autre</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={createForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
+      {/* Create Expense Dialog */}
+      <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Créer une nouvelle dépense</DialogTitle>
+            <DialogDescription>
+              Ajoutez les détails de la nouvelle dépense
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...createForm}>
+            <form onSubmit={createForm.handleSubmit(onCreateExpense)} className="space-y-4">
+              <FormField
+                control={createForm.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Catégorie</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <Textarea placeholder="Description de la dépense" {...field} />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une catégorie" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                      <SelectContent>
+                        <SelectItem value="rent">Loyer</SelectItem>
+                        <SelectItem value="electricity">Électricité</SelectItem>
+                        <SelectItem value="water">Eau</SelectItem>
+                        <SelectItem value="wifi">Internet</SelectItem>
+                        <SelectItem value="supplies">Fournitures</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                        <SelectItem value="other">Autre</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Description de la dépense" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Montant (DH)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpenCreateDialog(false)}>
+                  Annuler
+                </Button>
+                <Button type="submit" disabled={createExpenseMutation.isPending}>
+                  {createExpenseMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Création...
+                    </>
+                  ) : (
+                    "Créer"
                   )}
-                />
-                <FormField
-                  control={createForm.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Montant (DH)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={createForm.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setOpenCreateDialog(false)}>
-                    Annuler
-                  </Button>
-                  <Button type="submit" disabled={createExpenseMutation.isPending}>
-                    {createExpenseMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Création...
-                      </>
-                    ) : (
-                      "Créer"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
-        {/* Edit Expense Dialog */}
-        <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Modifier la dépense</DialogTitle>
-              <DialogDescription>
-                Modifiez les détails de la dépense
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...updateForm}>
-              <form onSubmit={updateForm.handleSubmit(onUpdateExpense)} className="space-y-4">
-                <FormField
-                  control={updateForm.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Catégorie</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une catégorie" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="rent">Loyer</SelectItem>
-                          <SelectItem value="electricity">Électricité</SelectItem>
-                          <SelectItem value="water">Eau</SelectItem>
-                          <SelectItem value="wifi">Internet</SelectItem>
-                          <SelectItem value="supplies">Fournitures</SelectItem>
-                          <SelectItem value="maintenance">Maintenance</SelectItem>
-                          <SelectItem value="other">Autre</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={updateForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
+      {/* Edit Expense Dialog */}
+      <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Modifier la dépense</DialogTitle>
+            <DialogDescription>
+              Modifiez les détails de la dépense
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...updateForm}>
+            <form onSubmit={updateForm.handleSubmit(onUpdateExpense)} className="space-y-4">
+              <FormField
+                control={updateForm.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Catégorie</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <Textarea placeholder="Description de la dépense" {...field} />
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une catégorie" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                      <SelectContent>
+                        <SelectItem value="rent">Loyer</SelectItem>
+                        <SelectItem value="electricity">Électricité</SelectItem>
+                        <SelectItem value="water">Eau</SelectItem>
+                        <SelectItem value="wifi">Internet</SelectItem>
+                        <SelectItem value="supplies">Fournitures</SelectItem>
+                        <SelectItem value="maintenance">Maintenance</SelectItem>
+                        <SelectItem value="other">Autre</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={updateForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Description de la dépense" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={updateForm.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Montant (DH)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={updateForm.control}
+                name="date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setOpenEditDialog(false)}>
+                  Annuler
+                </Button>
+                <Button type="submit" disabled={updateExpenseMutation.isPending}>
+                  {updateExpenseMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Mise à jour...
+                    </>
+                  ) : (
+                    "Enregistrer"
                   )}
-                />
-                <FormField
-                  control={updateForm.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Montant (DH)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={updateForm.control}
-                  name="date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Date</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setOpenEditDialog(false)}>
-                    Annuler
-                  </Button>
-                  <Button type="submit" disabled={updateExpenseMutation.isPending}>
-                    {updateExpenseMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Mise à jour...
-                      </>
-                    ) : (
-                      "Enregistrer"
-                    )}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
       </div>
-    </MainLayout>
   );
 }
