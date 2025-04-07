@@ -7,13 +7,23 @@ import {
   CalendarIcon,
   Menu,
   BarChart3,
+  LogOut,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
 
 export default function MobileNav() {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
+  const { logoutMutation } = useAuth();
+  
+  const handleLogout = () => {
+    logoutMutation.mutate();
+    setOpen(false);
+  };
 
   const bottomNavItems = [
     {
@@ -107,6 +117,27 @@ export default function MobileNav() {
                   </Link>
                 );
               })}
+              {/* Logout Button */}
+              <div className="mt-6 px-4">
+                <Button 
+                  variant="destructive" 
+                  className="w-full flex items-center justify-center" 
+                  onClick={handleLogout}
+                  disabled={logoutMutation.isPending}
+                >
+                  {logoutMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <span>Déconnexion en cours...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Se déconnecter</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </SheetContent>
         </Sheet>
@@ -130,6 +161,18 @@ export default function MobileNav() {
             </Link>
           );
         })}
+        <button
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
+          className="flex-1 flex flex-col items-center py-3 text-red-500"
+        >
+          {logoutMutation.isPending ? (
+            <Loader2 className="h-6 w-6 animate-spin" />
+          ) : (
+            <LogOut className="h-6 w-6" />
+          )}
+          <span className="text-xs mt-1">Déconnexion</span>
+        </button>
       </div>
     </>
   );
