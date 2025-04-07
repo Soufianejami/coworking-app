@@ -9,6 +9,8 @@ import {
   BarChart3,
   LogOut,
   Loader2,
+  DollarSign,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -18,7 +20,9 @@ import { Button } from "@/components/ui/button";
 export default function MobileNav() {
   const [location] = useLocation();
   const [open, setOpen] = useState(false);
-  const { logoutMutation } = useAuth();
+  const { user, logoutMutation } = useAuth();
+  
+  const isAdmin = user?.role === "admin";
   
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -98,7 +102,19 @@ export default function MobileNav() {
                   href: "/reports",
                   icon: BarChart3,
                 },
-              ].map((item) => {
+                {
+                  name: "Dépenses",
+                  href: "/expenses",
+                  icon: DollarSign,
+                  requiresAdmin: true,
+                },
+                {
+                  name: "Utilisateurs",
+                  href: "/users",
+                  icon: Users,
+                  requiresAdmin: true,
+                },
+              ].filter(item => !item.requiresAdmin || isAdmin).map((item) => {
                 const isActive = location === item.href;
                 return (
                   <Link

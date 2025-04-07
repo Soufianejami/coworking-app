@@ -2,6 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Route, Redirect } from "wouter";
 import { UserRole } from "@shared/schema";
+import MainLayout from "@/components/layout/main-layout";
 
 interface ProtectedRouteProps {
   path: string;
@@ -43,7 +44,11 @@ export function ProtectedRoute({
           );
         }
 
-        return <Component />;
+        return (
+          <MainLayout>
+            <Component />
+          </MainLayout>
+        );
       }}
     </Route>
   );
