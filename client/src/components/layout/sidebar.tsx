@@ -164,15 +164,15 @@ export default function Sidebar() {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} disabled={logoutMutation.isPending}>
               {logoutMutation.isPending ? (
-                <Fragment>
+                <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   <span>Déconnexion en cours...</span>
-                </Fragment>
+                </>
               ) : (
-                <Fragment>
+                <>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Se déconnecter</span>
-                </Fragment>
+                </>
               )}
             </DropdownMenuItem>
           </DropdownMenuContent>
