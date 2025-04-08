@@ -1,20 +1,14 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+
+import { createClient } from '@supabase/supabase-js';
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
-
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Check your .env file or environment variables.",
-  );
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  throw new Error("Supabase credentials must be set in environment variables");
 }
 
-const ssl = process.env.NODE_ENV === 'production';
+export const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
-export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  ssl: ssl ? { rejectUnauthorized: false } : false
-});
-export const db = drizzle({ client: pool, schema });
+export const db = supabase;
