@@ -1,16 +1,15 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  throw new Error("Supabase credentials must be set in environment variables");
+}
+
 export const db = supabase;
 
-// Export pool for compatibility with existing code that uses SQL queries
+// Export dummy pool for compatibility
 export const pool = {
-  query: async (text: string, params: any[] = []) => {
-    const { data, error } = await supabase.from(text).select('*');
-    if (error) throw error;
-    return { rows: data };
-  },
-  end: async () => {
-    // No-op for Supabase
-  }
+  query: async () => ({ rows: [] }),
+  end: async () => {}
 };

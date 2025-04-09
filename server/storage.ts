@@ -504,7 +504,9 @@ export class DatabaseStorage implements IStorage {
   
   // Products
   async getAllProducts(): Promise<Product[]> {
-    return await db.select().from(products);
+    const { data, error } = await db.from('products').select('*');
+    if (error) throw error;
+    return data || [];
   }
   
   async getProduct(id: number): Promise<Product | undefined> {
