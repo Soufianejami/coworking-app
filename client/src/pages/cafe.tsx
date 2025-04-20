@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useAuth } from "@/hooks/use-auth";
+import { Pencil, Trash2, MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -29,13 +33,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest } from "@/lib/queryClient";
 import CafeMenu from "@/components/cafe/cafe-menu";
 
 export default function Cafe() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [currentOrder, setCurrentOrder] = useState<any>(null);
   const [clientName, setClientName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [notes, setNotes] = useState("");
@@ -45,6 +59,9 @@ export default function Cafe() {
     price: number;
     quantity: number;
   }[]>([]);
+  
+  // Check if user is super_admin
+  const isSuperAdmin = user?.role === "super_admin";
   
   // Fetch today's orders
   const { data: cafeOrders, isLoading } = useQuery({
@@ -104,6 +121,54 @@ export default function Cafe() {
     },
   });
 
+  // Update order mutation
+  const updateOrder = useMutation({
+    mutationFn: async (updatedOrder: any) => {
+      return apiRequest("PATCH", `/api/transactions/${updatedOrder.id}`, updatedOrder);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/cafe`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/stats/daily`] });
+      toast({
+        title: "Commande modifiée",
+        description: "La commande a été modifiée avec succès.",
+      });
+      setEditDialogOpen(false);
+      setCurrentOrder(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la modification.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete order mutation
+  const deleteOrder = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/transactions/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/cafe`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/stats/daily`] });
+      toast({
+        title: "Commande supprimée",
+        description: "La commande a été supprimée avec succès.",
+      });
+      setDeleteDialogOpen(false);
+      setCurrentOrder(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedItems.length === 0) {
@@ -115,6 +180,45 @@ export default function Cafe() {
       return;
     }
     createOrder.mutate();
+  };
+  
+  const handleEdit = (order: any) => {
+    setCurrentOrder(order);
+    setClientName(order.clientName || "");
+    setPaymentMethod(order.paymentMethod || "cash");
+    setNotes(order.notes || "");
+    setSelectedItems(order.items || []);
+    setEditDialogOpen(true);
+  };
+  
+  const handleDelete = (order: any) => {
+    setCurrentOrder(order);
+    setDeleteDialogOpen(true);
+  };
+  
+  const handleUpdateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedItems.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner au moins un produit.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!currentOrder) return;
+    
+    const updatedOrder = {
+      ...currentOrder,
+      amount: selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+      clientName: clientName || undefined,
+      paymentMethod,
+      notes: notes || undefined,
+      items: selectedItems
+    };
+    
+    updateOrder.mutate(updatedOrder);
   };
 
   return (
@@ -268,18 +372,19 @@ export default function Cafe() {
                 <TableHead>Montant</TableHead>
                 <TableHead>Paiement</TableHead>
                 <TableHead>Notes</TableHead>
+                {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
+                  <TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center py-4">
                     Chargement des commandes...
                   </TableCell>
                 </TableRow>
               ) : cafeOrders?.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
+                  <TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center py-4">
                     Aucune commande enregistrée.
                   </TableCell>
                 </TableRow>
@@ -305,6 +410,28 @@ export default function Cafe() {
                       {order.paymentMethod === "mobile_transfer" && "Transfert mobile"}
                     </TableCell>
                     <TableCell>{order.notes || "-"}</TableCell>
+                    {isSuperAdmin && (
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Menu</span>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(order)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              <span>Modifier</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDelete(order)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              <span>Supprimer</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -312,6 +439,136 @@ export default function Cafe() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Order Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifier la commande</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateSubmit} className="space-y-4 mt-4">
+            <div>
+              <label
+                htmlFor="client-name-edit"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Nom du client (optionnel)
+              </label>
+              <Input
+                id="client-name-edit"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="Nom du client"
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sélectionnez les produits
+              </label>
+              <CafeMenu
+                products={products || []}
+                selectedItems={selectedItems}
+                setSelectedItems={setSelectedItems}
+              />
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-md">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-700">Total</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {orderTotal} DH
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="payment-method-edit"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Méthode de paiement
+              </label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Méthode de paiement" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Espèces</SelectItem>
+                  <SelectItem value="card">Carte bancaire</SelectItem>
+                  <SelectItem value="mobile_transfer">Transfert mobile</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="notes-edit"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Notes (optionnel)
+              </label>
+              <Textarea
+                id="notes-edit"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Notes additionnelles"
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => {
+                  setEditDialogOpen(false);
+                  setCurrentOrder(null);
+                }}
+              >
+                Annuler
+              </Button>
+              <Button type="submit" disabled={updateOrder.isPending}>
+                {updateOrder.isPending
+                  ? "Sauvegarde en cours..."
+                  : `Sauvegarder (${orderTotal} DH)`}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer la commande</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex space-x-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setCurrentOrder(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => currentOrder && deleteOrder.mutate(currentOrder.id)}
+              disabled={deleteOrder.isPending}
+            >
+              {deleteOrder.isPending ? "Suppression..." : "Supprimer"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

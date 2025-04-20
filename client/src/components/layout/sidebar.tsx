@@ -58,7 +58,7 @@ export default function Sidebar() {
     },
   ];
   
-  // Admin-only navigation items
+  // Admin navigation items
   const adminNavItems = [
     {
       name: "Tableau de bord",
@@ -95,6 +95,11 @@ export default function Sidebar() {
       href: "/expenses",
       icon: DollarSign,
     },
+  ];
+  
+  // Super Admin has access to everything including management sections
+  const superAdminNavItems = [
+    ...adminNavItems,
     {
       name: "Gestion des Produits",
       href: "/products",
@@ -113,7 +118,13 @@ export default function Sidebar() {
   ];
   
   // Use the appropriate navigation items based on user role
-  const navItems = isAdmin ? adminNavItems : cashierNavItems;
+  let navItems = cashierNavItems;
+  
+  if (user?.role === "admin") {
+    navItems = adminNavItems;
+  } else if (user?.role === "super_admin") {
+    navItems = superAdminNavItems;
+  }
 
   const handleLogout = () => {
     logoutMutation.mutate();
