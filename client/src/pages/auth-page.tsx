@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -30,11 +30,13 @@ export default function AuthPage() {
   const { loginMutation, registerMutation, user } = useAuth();
   const [, navigate] = useLocation();
 
-  // Redirect if already logged in
-  if (user) {
-    navigate('/');
-    return null;
-  }
+  // Nous allons utiliser un effet pour la redirection au lieu de le faire dans le rendu
+  // Cela évite l'erreur "Rendered fewer hooks than expected"
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   // Login form
   const loginForm = useForm<z.infer<typeof loginSchema>>({

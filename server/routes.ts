@@ -557,8 +557,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Inventory routes (admin only)
-  app.get(`${apiPrefix}/inventory`, requireAdmin, async (req: Request, res: Response) => {
+  // Inventory routes (admin and super_admin only)
+  app.get(`${apiPrefix}/inventory`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const inventory = await storage.getInventoryWithProducts();
       res.json(inventory);
@@ -567,7 +567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get(`${apiPrefix}/inventory/low-stock`, requireAdmin, async (req: Request, res: Response) => {
+  app.get(`${apiPrefix}/inventory/low-stock`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const lowStockItems = await storage.getLowStockItems();
       res.json(lowStockItems);
@@ -576,7 +576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get(`${apiPrefix}/inventory/expiring`, requireAdmin, async (req: Request, res: Response) => {
+  app.get(`${apiPrefix}/inventory/expiring`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const daysThreshold = req.query.days ? parseInt(req.query.days as string) : 7;
       const expiringItems = await storage.getExpiringItems(daysThreshold);
@@ -586,7 +586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get(`${apiPrefix}/inventory/:id`, requireAdmin, async (req: Request, res: Response) => {
+  app.get(`${apiPrefix}/inventory/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -604,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post(`${apiPrefix}/inventory`, requireAdmin, async (req: Request, res: Response) => {
+  app.post(`${apiPrefix}/inventory`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const inventoryData = insertInventorySchema.parse(req.body);
       const newInventoryItem = await storage.createInventoryItem(inventoryData);
@@ -614,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch(`${apiPrefix}/inventory/:id`, requireAdmin, async (req: Request, res: Response) => {
+  app.patch(`${apiPrefix}/inventory/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -632,8 +632,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Stock movement routes (admin only)
-  app.get(`${apiPrefix}/stock-movements`, requireAdmin, async (req: Request, res: Response) => {
+  // Stock movement routes (admin and super_admin only)
+  app.get(`${apiPrefix}/stock-movements`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
       const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
@@ -645,7 +645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get(`${apiPrefix}/stock-movements/product/:productId`, requireAdmin, async (req: Request, res: Response) => {
+  app.get(`${apiPrefix}/stock-movements/product/:productId`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const productId = parseInt(req.params.productId);
       if (isNaN(productId)) {
@@ -659,7 +659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post(`${apiPrefix}/stock/add`, requireAdmin, async (req: Request, res: Response) => {
+  app.post(`${apiPrefix}/stock/add`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const { productId, quantity, reason } = req.body;
       
@@ -675,7 +675,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post(`${apiPrefix}/stock/remove`, requireAdmin, async (req: Request, res: Response) => {
+  app.post(`${apiPrefix}/stock/remove`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const { productId, quantity, reason } = req.body;
       
@@ -691,7 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post(`${apiPrefix}/stock/adjust`, requireAdmin, async (req: Request, res: Response) => {
+  app.post(`${apiPrefix}/stock/adjust`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const { productId, newQuantity, reason } = req.body;
       
