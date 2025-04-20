@@ -29,7 +29,24 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    let url = queryKey[0] as string;
+    
+    // Handle additional query parameters from queryKey
+    if (queryKey.length > 1) {
+      const params = new URLSearchParams();
+      
+      // Date parameter for stats/daily
+      if (url === '/api/stats/daily' && queryKey[1]) {
+        params.append('date', queryKey[1] as string);
+      }
+      
+      // Add params to url if we have any
+      if (params.toString()) {
+        url += '?' + params.toString();
+      }
+    }
+    
+    const res = await fetch(url, {
       credentials: "include",
     });
 

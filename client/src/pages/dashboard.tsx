@@ -16,7 +16,7 @@ export default function Dashboard() {
   
   // Get today's stats
   const { data: dailyStats, isLoading: statsLoading } = useQuery({
-    queryKey: [`/api/stats/daily?date=${format(today, 'yyyy-MM-dd')}`],
+    queryKey: [`/api/stats/daily`, format(today, 'yyyy-MM-dd')],
   });
   
   // Get recent transactions
