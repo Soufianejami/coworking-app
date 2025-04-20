@@ -71,6 +71,7 @@ export default function Subscriptions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/subscription`] });
       queryClient.invalidateQueries({ queryKey: [`/api/stats/daily`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/stats/range`] });
       toast({
         title: "Abonnement ajouté",
         description: "L'abonnement mensuel a été enregistré avec succès."
@@ -112,6 +113,7 @@ export default function Subscriptions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/subscription`] });
       queryClient.invalidateQueries({ queryKey: [`/api/stats/daily`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/stats/range`] });
       toast({
         title: "Abonnement modifié",
         description: "L'abonnement a été mis à jour avec succès."
@@ -140,6 +142,7 @@ export default function Subscriptions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/subscription`] });
       queryClient.invalidateQueries({ queryKey: [`/api/stats/daily`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/stats/range`] });
       toast({
         title: "Abonnement supprimé",
         description: "L'abonnement a été supprimé avec succès."
