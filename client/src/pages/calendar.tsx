@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, startOfMonth, endOfMonth, parseISO, compareAsc, isSameDay } from "date-fns";
 import { fr } from "date-fns/locale";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +21,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -29,10 +40,50 @@ import {
 } from "@/components/ui/table";
 
 export default function Calendar() {
+  const { toast } = useToast();
+  const { user } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [revenueFilter, setRevenueFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [currentTransaction, setCurrentTransaction] = useState<any>(null);
+  
+  // Check if user is super_admin
+  const isSuperAdmin = user?.role === "super_admin";
+  
+  // Delete transaction mutation
+  const deleteTransaction = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/transactions/${id}`);
+    },
+    onSuccess: () => {
+      // Refresh transactions and stats
+      if (selectedDate) {
+        refetchTransactions({
+          queryKey: [`/api/transactions/byDate?startDate=${format(selectedDate, 'yyyy-MM-dd')}&endDate=${format(selectedDate, 'yyyy-MM-dd')}`],
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: [`/api/stats/range`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/stats/daily`] });
+      
+      toast({
+        title: "Transaction supprimée",
+        description: "La transaction a été supprimée avec succès.",
+      });
+      
+      setDeleteDialogOpen(false);
+      setCurrentTransaction(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression.",
+        variant: "destructive",
+      });
+    },
+  });
   
   const startOfCurrentMonth = startOfMonth(currentMonth);
   const endOfCurrentMonth = endOfMonth(currentMonth);
@@ -147,6 +198,19 @@ export default function Calendar() {
         return { name: "Café", class: "bg-amber-100 text-amber-800" };
       default:
         return { name: type, class: "bg-gray-100 text-gray-800" };
+    }
+  };
+  
+  // Handle delete transaction
+  const handleDeleteTransaction = (transaction: any) => {
+    setCurrentTransaction(transaction);
+    setDeleteDialogOpen(true);
+  };
+  
+  // Confirm delete transaction
+  const confirmDeleteTransaction = () => {
+    if (currentTransaction) {
+      deleteTransaction.mutate(currentTransaction.id);
     }
   };
   
@@ -331,12 +395,13 @@ export default function Calendar() {
                     <TableHead>Description</TableHead>
                     <TableHead>Montant</TableHead>
                     <TableHead>Paiement</TableHead>
+                    {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {selectedDateTransactions?.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-4">
+                      <TableCell colSpan={isSuperAdmin ? 7 : 6} className="text-center py-4">
                         Aucune transaction pour cette journée.
                       </TableCell>
                     </TableRow>
@@ -371,6 +436,20 @@ export default function Calendar() {
                             {transaction.paymentMethod === 'card' && 'Carte bancaire'}
                             {transaction.paymentMethod === 'mobile_transfer' && 'Transfert mobile'}
                           </TableCell>
+                          {isSuperAdmin && (
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTransaction(transaction);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-500" />
+                              </Button>
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })
@@ -388,6 +467,36 @@ export default function Calendar() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer la transaction</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer cette transaction ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex space-x-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setCurrentTransaction(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteTransaction}
+              disabled={deleteTransaction.isPending}
+            >
+              {deleteTransaction.isPending ? "Suppression..." : "Supprimer"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
