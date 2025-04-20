@@ -120,9 +120,13 @@ export default function Sidebar() {
   // Use the appropriate navigation items based on user role
   let navItems = cashierNavItems;
   
+  // Debugging user role
+  console.log("Current user role:", user?.role);
+  
   if (user?.role === "admin") {
     navItems = adminNavItems;
   } else if (user?.role === "super_admin") {
+    console.log("Using superAdminNavItems");
     navItems = superAdminNavItems;
   }
 
