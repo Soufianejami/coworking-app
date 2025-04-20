@@ -51,7 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post(`${apiPrefix}/products`, async (req: Request, res: Response) => {
+  app.post(`${apiPrefix}/products`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const productData = insertProductSchema.parse(req.body);
       const newProduct = await storage.createProduct(productData);
@@ -61,7 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch(`${apiPrefix}/products/:id`, async (req: Request, res: Response) => {
+  app.patch(`${apiPrefix}/products/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {

@@ -33,10 +33,10 @@ function Router() {
       <ProtectedRoute path="/reports" component={Reports} />
       <ProtectedRoute path="/expenses" component={Expenses} />
       
-      {/* Admin-only routes */}
-      <ProtectedRoute path="/users" component={Users} allowedRoles={["admin"]} />
-      <ProtectedRoute path="/stock" component={Stock} allowedRoles={["admin"]} />
-      <ProtectedRoute path="/products" component={Products} allowedRoles={["admin"]} />
+      {/* Admin and Super Admin routes */}
+      <ProtectedRoute path="/users" component={Users} allowedRoles={["admin", "super_admin"]} />
+      <ProtectedRoute path="/stock" component={Stock} allowedRoles={["admin", "super_admin"]} />
+      <ProtectedRoute path="/products" component={Products} allowedRoles={["admin", "super_admin"]} />
       
       {/* 404 route */}
       <Route component={NotFound} />
