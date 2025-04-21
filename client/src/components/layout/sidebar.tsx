@@ -32,8 +32,9 @@ export default function Sidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   
+  // Maintenant tous les admins ont les mêmes droits que les superadmins
   const isAdmin = user?.role === "admin" || user?.role === "super_admin";
-  const isSuperAdmin = user?.role === "super_admin";
+  const isSuperAdmin = user?.role === "admin" || user?.role === "super_admin";
 
   const cashierNavItems = [
     {
@@ -122,12 +123,10 @@ export default function Sidebar() {
   
   // Debugging user role
   console.log("Current user role:", user?.role);
+  console.log("Checking role access:", { userRole: user?.role, isSuperAdmin, path: location });
   
-  if (user?.role === "admin") {
-    navItems = adminNavItems;
-  } else if (user?.role === "super_admin") {
-    console.log("Using superAdminNavItems");
-    navItems = superAdminNavItems;
+  if (user?.role === "admin" || user?.role === "super_admin") {
+    navItems = superAdminNavItems; // Maintenant les admins ont accès à tout comme les superadmins
   }
 
   const handleLogout = () => {
