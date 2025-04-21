@@ -287,7 +287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // User management routes (admin only)
-  app.get(`${apiPrefix}/users`, requireAdmin, async (req: Request, res: Response) => {
+  app.get(`${apiPrefix}/users`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const users = await storage.getAllUsers();
       // Remove passwords from response
@@ -301,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get(`${apiPrefix}/users/:id`, requireAdmin, async (req: Request, res: Response) => {
+  app.get(`${apiPrefix}/users/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -322,7 +322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post(`${apiPrefix}/users`, requireAdmin, async (req: Request, res: Response) => {
+  app.post(`${apiPrefix}/users`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       // Validate user data
       const userData = insertUserSchema.parse(req.body);
