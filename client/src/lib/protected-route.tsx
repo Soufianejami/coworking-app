@@ -33,7 +33,14 @@ export function ProtectedRoute({
         }
 
         // If specific roles are required, check if user has one of them
+        console.log("Checking role access:", {
+          userRole: user.role,
+          allowedRoles: allowedRoles,
+          path: path
+        });
+        
         if (allowedRoles && !allowedRoles.includes(user.role)) {
+          console.log("Access denied - role mismatch!");
           return (
             <div className="flex flex-col items-center justify-center min-h-screen">
               <h1 className="text-2xl font-bold text-destructive mb-2">Accès refusé</h1>
