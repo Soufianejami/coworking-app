@@ -20,7 +20,7 @@ import { Edit, MoreVertical, Trash } from "lucide-react";
 export default function Subscriptions() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const isSuperAdmin = user?.role === "super_admin";
+  const isSuperAdmin = user?.role === "admin"; // Temporairement, les admins ont les mêmes droits que superadmin
   
   // Dialog states
   const [open, setOpen] = useState(false);

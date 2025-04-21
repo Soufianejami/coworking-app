@@ -204,29 +204,41 @@ export const requireRole = (role: string) => {
 
 // Pour un rôle spécifique
 export const requireAdmin = requireRole('admin');
-export const requireSuperAdmin = requireRole('super_admin');
 
-// Modifié pour accepter à la fois admin et super_admin
-export const requireAdminRole = (req: any, res: any, next: any) => {
+// Temporairement modifié pour permettre l'accès aux admins également
+export const requireSuperAdmin = (req: any, res: any, next: any) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
-  if ((req.user as Express.User).role !== 'admin' && (req.user as Express.User).role !== 'super_admin') {
+  if ((req.user as Express.User).role !== 'admin') {
     return res.status(403).json({ message: "Forbidden: admin access required" });
   }
   
   next();
 };
 
-// Middleware qui accepte admin ou super_admin
+// Modifié pour accepter admin uniquement
+export const requireAdminRole = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  
+  if ((req.user as Express.User).role !== 'admin') {
+    return res.status(403).json({ message: "Forbidden: admin access required" });
+  }
+  
+  next();
+};
+
+// Middleware qui accepte admin uniquement (temporairement)
 export const requireAdminOrSuperAdmin = (req: any, res: any, next: any) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
-  if ((req.user as Express.User).role !== 'admin' && (req.user as Express.User).role !== 'super_admin') {
-    return res.status(403).json({ message: "Forbidden: Admin or Super Admin access required" });
+  if ((req.user as Express.User).role !== 'admin') {
+    return res.status(403).json({ message: "Forbidden: Admin access required" });
   }
   
   next();
