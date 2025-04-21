@@ -60,8 +60,8 @@ export default function Cafe() {
     quantity: number;
   }[]>([]);
   
-  // Check if user is super_admin
-  const isSuperAdmin = user?.role === "super_admin";
+  // Check if user is admin (temporairement, les admins ont les mêmes droits que superadmin)
+  const isSuperAdmin = user?.role === "admin";
   
   // Fetch today's orders
   const { data: cafeOrders, isLoading } = useQuery({

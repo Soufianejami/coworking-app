@@ -50,8 +50,8 @@ export default function Calendar() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentTransaction, setCurrentTransaction] = useState<any>(null);
   
-  // Check if user is super_admin
-  const isSuperAdmin = user?.role === "super_admin";
+  // Check if user is admin (temporairement, les admins ont les mêmes droits que superadmin)
+  const isSuperAdmin = user?.role === "admin";
   
   // Delete transaction mutation
   const deleteTransaction = useMutation({
