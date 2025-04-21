@@ -24,16 +24,16 @@ function Router() {
       {/* Public routes */}
       <Route path="/auth" component={AuthPage} />
       
-      {/* Protected routes */}
+      {/* Routes accessibles à tous les rôles */}
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/daily-entries" component={DailyEntries} />
       <ProtectedRoute path="/subscriptions" component={Subscriptions} />
       <ProtectedRoute path="/cafe" component={Cafe} />
       <ProtectedRoute path="/calendar" component={Calendar} />
       <ProtectedRoute path="/reports" component={Reports} />
-      <ProtectedRoute path="/expenses" component={Expenses} />
       
-      {/* Admin and Super Admin routes */}
+      {/* Routes pour admin et super_admin uniquement */}
+      <ProtectedRoute path="/expenses" component={Expenses} allowedRoles={["admin", "super_admin"]} />
       <ProtectedRoute path="/users" component={Users} allowedRoles={["admin", "super_admin"]} />
       <ProtectedRoute path="/stock" component={Stock} allowedRoles={["admin", "super_admin"]} />
       <ProtectedRoute path="/products" component={Products} allowedRoles={["admin", "super_admin"]} />
