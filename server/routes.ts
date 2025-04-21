@@ -348,7 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch(`${apiPrefix}/users/:id`, requireAdmin, async (req: Request, res: Response) => {
+  app.patch(`${apiPrefix}/users/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -381,7 +381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete(`${apiPrefix}/users/:id`, requireAdmin, async (req: Request, res: Response) => {
+  app.delete(`${apiPrefix}/users/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -458,7 +458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post(`${apiPrefix}/expenses`, requireAdmin, async (req: Request, res: Response) => {
+  app.post(`${apiPrefix}/expenses`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       // Validate expense data
       const expenseData = insertExpenseSchema.parse(req.body);
@@ -474,7 +474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.patch(`${apiPrefix}/expenses/:id`, requireAdmin, async (req: Request, res: Response) => {
+  app.patch(`${apiPrefix}/expenses/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -492,7 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.delete(`${apiPrefix}/expenses/:id`, requireAdmin, async (req: Request, res: Response) => {
+  app.delete(`${apiPrefix}/expenses/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
