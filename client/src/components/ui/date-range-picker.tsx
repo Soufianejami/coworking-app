@@ -1,30 +1,27 @@
-import * as React from "react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { DateRange } from "react-day-picker";
+import * as React from "react"
+import { CalendarIcon } from "lucide-react"
+import { addDays, format } from "date-fns"
+import { fr } from "date-fns/locale"
+import { DateRange } from "react-day-picker"
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@/components/ui/popover"
 
-interface DatePickerWithRangeProps {
-  date: DateRange | undefined;
-  onDateChange: (date: DateRange | undefined) => void;
-  className?: string;
-  align?: "start" | "center" | "end";
+interface DatePickerWithRangeProps extends React.HTMLAttributes<HTMLDivElement> {
+  date?: DateRange | undefined
+  onDateChange: (date: DateRange | undefined) => void
 }
 
 export function DatePickerWithRange({
   date,
   onDateChange,
   className,
-  align = "start",
 }: DatePickerWithRangeProps) {
   return (
     <div className={cn("grid gap-2", className)}>
@@ -34,7 +31,7 @@ export function DatePickerWithRange({
             id="date"
             variant={"outline"}
             className={cn(
-              "w-[260px] justify-start text-left font-normal",
+              "w-[300px] justify-start text-left font-normal",
               !date && "text-muted-foreground"
             )}
           >
@@ -49,11 +46,11 @@ export function DatePickerWithRange({
                 format(date.from, "dd/MM/yyyy", { locale: fr })
               )
             ) : (
-              <span>Sélectionner une période</span>
+              <span>Sélectionnez une période</span>
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align={align}>
+        <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             initialFocus
             mode="range"
@@ -66,5 +63,5 @@ export function DatePickerWithRange({
         </PopoverContent>
       </Popover>
     </div>
-  );
+  )
 }
