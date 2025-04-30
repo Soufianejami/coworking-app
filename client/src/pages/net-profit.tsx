@@ -421,7 +421,7 @@ export default function NetProfitPage() {
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <h2 className="text-lg font-semibold">Évolution du Bénéfice</h2>
-          <Tabs value={period} onValueChange={setPeriod}>
+          <Tabs value={period} onValueChange={setPeriod} className="w-full">
             <TabsList>
               <TabsTrigger value="daily" className="flex items-center gap-1">
                 <CalendarIcon className="h-4 w-4" />
@@ -432,105 +432,121 @@ export default function NetProfitPage() {
                 Mensuel
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="daily" className="mt-4">
+              <Card className="shadow-sm">
+                <CardContent className="pt-6 pb-2">
+                  {isLoadingDaily ? (
+                    <div className="flex items-center justify-center h-[400px]">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                        <p className="text-muted-foreground">Chargement des données...</p>
+                      </div>
+                    </div>
+                  ) : dailyData && dailyData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={400}>
+                      <LineChart data={formattedDailyData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="name" 
+                          tick={{ fontSize: 12 }}
+                          interval={Math.ceil(formattedDailyData?.length / 15) - 1}
+                        />
+                        <YAxis />
+                        <Tooltip 
+                          formatter={(value: number) => [
+                            formatNumber(value), 
+                            value === 0 ? "Neutre" : value > 0 ? "Profit" : "Perte"
+                          ]}
+                          labelFormatter={(label) => `Jour: ${label}`}
+                        />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="revenue" 
+                          name="Revenus" 
+                          stroke="#4338ca" 
+                          activeDot={{ r: 8 }} 
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="costs" 
+                          name="Coûts" 
+                          stroke="#ef4444"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="profit" 
+                          name="Bénéfice Net" 
+                          stroke="#22c55e"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-[400px]">
+                      <p className="text-muted-foreground">Aucune donnée disponible pour cette période.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="monthly" className="mt-4">
+              <Card className="shadow-sm">
+                <CardContent className="pt-6 pb-2">
+                  {isLoadingMonthly ? (
+                    <div className="flex items-center justify-center h-[400px]">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                        <p className="text-muted-foreground">Chargement des données...</p>
+                      </div>
+                    </div>
+                  ) : monthlyData && monthlyData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart data={formattedMonthlyData}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="name" 
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis />
+                        <Tooltip 
+                          formatter={(value: number) => [
+                            formatNumber(value), 
+                            value === 0 ? "Neutre" : value > 0 ? "Profit" : "Perte"
+                          ]}
+                          labelFormatter={(label) => `Mois: ${label}`}
+                        />
+                        <Legend />
+                        <Bar 
+                          dataKey="revenue" 
+                          name="Revenus" 
+                          stackId="a" 
+                          fill="#4338ca" 
+                        />
+                        <Bar 
+                          dataKey="costs" 
+                          name="Coûts" 
+                          stackId="a" 
+                          fill="#ef4444" 
+                        />
+                        <Bar 
+                          dataKey="profit" 
+                          name="Bénéfice Net" 
+                          fill="#22c55e" 
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-[400px]">
+                      <p className="text-muted-foreground">Aucune donnée disponible pour cette période.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
-
-        <TabsContent value="daily" className="mt-0">
-          <Card className="shadow-sm">
-            <CardContent className="pt-6 pb-2">
-              {isLoadingDaily ? (
-                <div className="flex items-center justify-center h-[400px]">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-                    <p className="text-muted-foreground">Chargement des données...</p>
-                  </div>
-                </div>
-              ) : dailyData && dailyData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={formattedDailyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="name" 
-                      tick={{ fontSize: 12 }}
-                      interval={Math.ceil(formattedDailyData?.length / 15) - 1}
-                    />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value: number) => [
-                        formatNumber(value), 
-                        value === 0 ? "Neutre" : value > 0 ? "Profit" : "Perte"
-                      ]}
-                      labelFormatter={(label) => `Jour: ${label}`}
-                    />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="revenue" 
-                      name="Revenus" 
-                      stroke="#4338ca" 
-                      activeDot={{ r: 8 }} 
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="costs" 
-                      name="Coûts" 
-                      stroke="#ef4444"
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="profit" 
-                      name="Bénéfice" 
-                      stroke="#10b981" 
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[400px]">
-                  <p className="text-muted-foreground">Aucune donnée disponible pour la période sélectionnée</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="monthly" className="mt-0">
-          <Card className="shadow-sm">
-            <CardContent className="pt-6 pb-2">
-              {isLoadingMonthly ? (
-                <div className="flex items-center justify-center h-[400px]">
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
-                    <p className="text-muted-foreground">Chargement des données...</p>
-                  </div>
-                </div>
-              ) : monthlyData && monthlyData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={formattedMonthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis 
-                      dataKey="name" 
-                      tick={{ fontSize: 12 }}
-                      interval={0}
-                    />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value: number) => [formatNumber(value)]}
-                    />
-                    <Legend />
-                    <Bar dataKey="revenue" name="Revenus" fill="#4338ca" />
-                    <Bar dataKey="costs" name="Coûts" fill="#ef4444" />
-                    <Bar dataKey="profit" name="Bénéfice" fill="#10b981" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[400px]">
-                  <p className="text-muted-foreground">Aucune donnée disponible pour la période sélectionnée</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </div>
     </div>
   );
