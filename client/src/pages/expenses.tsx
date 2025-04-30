@@ -98,41 +98,43 @@ export default function ExpensesPage() {
     queryFn: getQueryFn({ on401: "throw" }),
   });
   
-  // Initialize with current month by default
+  // Combined effect to handle initialization and filtering
   useEffect(() => {
-    if (!dateRange && expenses.length > 0) {
-      const now = new Date();
-      const firstDayOfMonth = startOfMonth(now);
-      const lastDayOfMonth = endOfMonth(now);
-      setDateRange({ 
-        from: firstDayOfMonth, 
-        to: lastDayOfMonth 
-      });
-    }
-  }, [expenses, dateRange]);
-  
-  // Update filtered expenses when date range or expenses change
-  useEffect(() => {
+    // Only set default date range once when data is first loaded
     if (expenses.length > 0) {
-      if (dateRange && dateRange.from) {
+      if (!dateRange) {
+        // Initialize with current month by default
+        const now = new Date();
+        setDateRange({
+          from: startOfMonth(now),
+          to: endOfMonth(now)
+        });
+        return; // Don't filter yet, we'll do it when dateRange changes
+      }
+      
+      // Handle filtering with date range
+      if (dateRange.from) {
         const filtered = expenses.filter(expense => {
           const expenseDate = new Date(expense.date);
+          
           if (dateRange.to) {
-            return isWithinInterval(expenseDate, { 
-              start: new Date(dateRange.from), 
-              end: new Date(dateRange.to) 
+            // Use explicit date objects to avoid type issues
+            return isWithinInterval(expenseDate, {
+              start: new Date(dateRange.from as Date),
+              end: new Date(dateRange.to as Date)
             });
           } else {
-            // If only one date is selected, show expenses from that day
-            const fromDate = new Date(dateRange.from);
-            return expenseDate.toDateString() === fromDate.toDateString();
+            // If only from date exists (single day selection)
+            return expenseDate.toDateString() === new Date(dateRange.from as Date).toDateString();
           }
         });
         setFilteredExpenses(filtered);
       } else {
+        // No valid date range, show all expenses
         setFilteredExpenses(expenses);
       }
     } else {
+      // No expenses, empty filter result
       setFilteredExpenses([]);
     }
   }, [expenses, dateRange]);
@@ -372,6 +374,37 @@ export default function ExpensesPage() {
           )}
         </CardHeader>
         <CardContent>
+          {/* Date Filter */}
+          <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+            <div className="flex-1">
+              <DatePickerWithRange
+                date={dateRange}
+                onDateChange={setDateRange}
+                className="w-full"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={setCurrentMonth}
+                variant="outline"
+                size="sm"
+              >
+                Mois courant
+              </Button>
+              {dateRange && (
+                <Button
+                  onClick={resetDateFilter}
+                  variant="outline"
+                  size="sm"
+                >
+                  <FilterX className="mr-2 h-4 w-4" />
+                  Réinitialiser
+                </Button>
+              )}
+            </div>
+          </div>
+          
+          {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <Card>
               <CardHeader className="pb-2">
@@ -392,9 +425,13 @@ export default function ExpensesPage() {
               <CardContent>
                 <div className="text-2xl font-bold">
                   {formatCurrency(
-                    expenses
-                      .filter((e) => ["rent", "electricity", "water", "wifi"].includes(e.category))
-                      .reduce((sum, e) => sum + Number(e.amount), 0)
+                    filteredExpenses.length > 0
+                      ? filteredExpenses
+                          .filter((e) => ["rent", "electricity", "water", "wifi"].includes(e.category))
+                          .reduce((sum, e) => sum + Number(e.amount), 0)
+                      : expenses
+                          .filter((e) => ["rent", "electricity", "water", "wifi"].includes(e.category))
+                          .reduce((sum, e) => sum + Number(e.amount), 0)
                   )}
                 </div>
               </CardContent>
@@ -408,9 +445,13 @@ export default function ExpensesPage() {
               <CardContent>
                 <div className="text-2xl font-bold">
                   {formatCurrency(
-                    expenses
-                      .filter((e) => ["supplies", "maintenance", "other"].includes(e.category))
-                      .reduce((sum, e) => sum + Number(e.amount), 0)
+                    filteredExpenses.length > 0
+                      ? filteredExpenses
+                          .filter((e) => ["supplies", "maintenance", "other"].includes(e.category))
+                          .reduce((sum, e) => sum + Number(e.amount), 0)
+                      : expenses
+                          .filter((e) => ["supplies", "maintenance", "other"].includes(e.category))
+                          .reduce((sum, e) => sum + Number(e.amount), 0)
                   )}
                 </div>
               </CardContent>
