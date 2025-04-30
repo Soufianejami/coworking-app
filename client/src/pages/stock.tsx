@@ -379,7 +379,7 @@ export default function StockPage() {
       createInventoryMutation.mutate({
         productId: newProduct.id,
         minThreshold: parseInt(inventoryForm.minThreshold),
-        ...(inventoryForm.purchasePrice ? { purchasePrice: parseInt(inventoryForm.purchasePrice) } : {}),
+        ...(inventoryForm.purchasePrice ? { purchasePrice: parseFloat(inventoryForm.purchasePrice) } : {}),
         ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : {}),
       });
     },
@@ -408,7 +408,7 @@ export default function StockPage() {
       createInventoryMutation.mutate({
         productId: parseInt(inventoryForm.productId),
         minThreshold: parseInt(inventoryForm.minThreshold),
-        ...(inventoryForm.purchasePrice ? { purchasePrice: parseInt(inventoryForm.purchasePrice) } : {}),
+        ...(inventoryForm.purchasePrice ? { purchasePrice: parseFloat(inventoryForm.purchasePrice) } : {}),
         ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : {}),
       });
     }
@@ -421,7 +421,7 @@ export default function StockPage() {
     const formData = {
       id: selectedItem.id,
       minThreshold: parseInt(inventoryForm.minThreshold),
-      ...(inventoryForm.purchasePrice ? { purchasePrice: parseInt(inventoryForm.purchasePrice) } : {}),
+      ...(inventoryForm.purchasePrice ? { purchasePrice: parseFloat(inventoryForm.purchasePrice) } : {}),
       ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : { expirationDate: null }),
     };
 
