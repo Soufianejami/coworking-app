@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 import { Expense, ExpenseCategory, EXPENSE_CATEGORIES, insertExpenseSchema } from "@shared/schema";
@@ -8,6 +8,8 @@ import { z } from "zod";
 import MainLayout from "@/components/layout/main-layout";
 import { formatCurrency } from "@/lib/utils";
 import { formatDate } from "@/lib/date-utils";
+import { DateRange } from "react-day-picker";
+import { addDays, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 
 import {
   Table,
@@ -66,8 +68,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, Loader2, Pencil, Plus, Trash2, FilterX } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 
 // Form schema for creating/updating an expense
 const expenseFormSchema = z.object({
@@ -86,12 +89,53 @@ export default function ExpensesPage() {
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
   
   // Fetch all expenses
   const { data: expenses = [], isLoading } = useQuery<Expense[], Error>({
     queryKey: ["/api/expenses"],
     queryFn: getQueryFn({ on401: "throw" }),
   });
+  
+  // Initialize with current month by default
+  useEffect(() => {
+    if (!dateRange && expenses.length > 0) {
+      const now = new Date();
+      const firstDayOfMonth = startOfMonth(now);
+      const lastDayOfMonth = endOfMonth(now);
+      setDateRange({ 
+        from: firstDayOfMonth, 
+        to: lastDayOfMonth 
+      });
+    }
+  }, [expenses, dateRange]);
+  
+  // Update filtered expenses when date range or expenses change
+  useEffect(() => {
+    if (expenses.length > 0) {
+      if (dateRange && dateRange.from) {
+        const filtered = expenses.filter(expense => {
+          const expenseDate = new Date(expense.date);
+          if (dateRange.to) {
+            return isWithinInterval(expenseDate, { 
+              start: new Date(dateRange.from), 
+              end: new Date(dateRange.to) 
+            });
+          } else {
+            // If only one date is selected, show expenses from that day
+            const fromDate = new Date(dateRange.from);
+            return expenseDate.toDateString() === fromDate.toDateString();
+          }
+        });
+        setFilteredExpenses(filtered);
+      } else {
+        setFilteredExpenses(expenses);
+      }
+    } else {
+      setFilteredExpenses([]);
+    }
+  }, [expenses, dateRange]);
 
   // Create expense form
   const createForm = useForm<z.infer<typeof expenseFormSchema>>({
@@ -210,8 +254,16 @@ export default function ExpensesPage() {
     },
   });
 
-  // Calculate total expenses
-  const totalExpenses = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+  // Calculate total expenses based on filtered data if available
+  const totalExpenses = filteredExpenses.length > 0 
+    ? filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0)
+    : expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+  // Function to reset the date filter
+  const resetDateFilter = () => {
+    setDateRange(undefined);
+    setFilteredExpenses(expenses);
+  };
 
   // Handle expense creation
   function onCreateExpense(data: z.infer<typeof expenseFormSchema>) {
@@ -276,9 +328,21 @@ export default function ExpensesPage() {
     return categoryMap[category] || category;
   }
 
+  // Filter expenses based on date range
+  const expensesToShow = filteredExpenses.length > 0 ? filteredExpenses : expenses;
+  
+  // Helper function to set date to first or last day of month
+  const setCurrentMonth = () => {
+    const now = new Date();
+    setDateRange({ 
+      from: startOfMonth(now), 
+      to: endOfMonth(now) 
+    });
+  };
+  
   // Group expenses by month
   const expensesByMonth: Record<string, Expense[]> = {};
-  expenses.forEach((expense) => {
+  expensesToShow.forEach((expense) => {
     const date = new Date(expense.date);
     const monthYear = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     if (!expensesByMonth[monthYear]) {
@@ -380,7 +444,7 @@ export default function ExpensesPage() {
             <Card key={month} className="mb-6">
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Calendar className="h-5 w-5 mr-2" />
+                  <CalendarIcon className="h-5 w-5 mr-2" />
                   <span className="capitalize">{monthName}</span>
                 </CardTitle>
                 <CardDescription>
