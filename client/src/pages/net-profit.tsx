@@ -52,6 +52,48 @@ import { DateRange } from "react-day-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 
+// Définition des types pour les données de l'API
+type RevenueData = {
+  entries: number;
+  subscriptions: number;
+  cafe: number;
+  total: number;
+};
+
+type CostsData = {
+  cafeProducts: number;
+  expenses: number;
+  total: number;
+};
+
+type NetProfitData = {
+  startDate: string;
+  endDate: string;
+  revenue: RevenueData;
+  costs: CostsData;
+  grossProfit: number;
+  netProfit: number;
+};
+
+type DailyProfitData = {
+  date: string;
+  revenue: RevenueData;
+  costs: CostsData;
+  grossProfit: number;
+  netProfit: number;
+};
+
+type MonthlyProfitData = {
+  month: string;
+  monthName: string;
+  startDate: string;
+  endDate: string;
+  revenue: RevenueData;
+  costs: CostsData;
+  grossProfit: number;
+  netProfit: number;
+};
+
 export default function NetProfitPage() {
   const { toast } = useToast();
   const [period, setPeriod] = useState("monthly");
@@ -68,7 +110,7 @@ export default function NetProfitPage() {
   // Requête pour le bénéfice net total
   const { data: netProfitData, isLoading: isLoadingNetProfit } = useQuery({
     queryKey: [
-      \`/api/stats/net-profit?startDate=\${format(startDate, 'yyyy-MM-dd')}&endDate=\${format(endDate, 'yyyy-MM-dd')}\`
+      `/api/stats/net-profit?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
     ],
     enabled: !!dateRange?.from && !!dateRange?.to
   });
@@ -76,7 +118,7 @@ export default function NetProfitPage() {
   // Requête pour les données mensuelles
   const { data: monthlyData, isLoading: isLoadingMonthly } = useQuery({
     queryKey: [
-      \`/api/stats/net-profit/monthly?startDate=\${format(startDate, 'yyyy-MM-dd')}&endDate=\${format(endDate, 'yyyy-MM-dd')}\`
+      `/api/stats/net-profit/monthly?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
     ],
     enabled: !!dateRange?.from && !!dateRange?.to && period === "monthly"
   });
@@ -84,7 +126,7 @@ export default function NetProfitPage() {
   // Requête pour les données quotidiennes
   const { data: dailyData, isLoading: isLoadingDaily } = useQuery({
     queryKey: [
-      \`/api/stats/net-profit/daily?startDate=\${format(startDate, 'yyyy-MM-dd')}&endDate=\${format(endDate, 'yyyy-MM-dd')}\`
+      `/api/stats/net-profit/daily?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
     ],
     enabled: !!dateRange?.from && !!dateRange?.to && period === "daily"
   });

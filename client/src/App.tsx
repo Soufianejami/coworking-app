@@ -15,6 +15,7 @@ import Users from "@/pages/users";
 import Expenses from "@/pages/expenses";
 import Stock from "@/pages/stock";
 import Products from "@/pages/products";
+import NetProfit from "@/pages/net-profit";
 import AuthPage from "@/pages/auth-page";
 import NotFound from "@/pages/not-found";
 
@@ -37,6 +38,7 @@ function Router() {
       <ProtectedRoute path="/users" component={Users} allowedRoles={["admin", "super_admin"]} />
       <ProtectedRoute path="/stock" component={Stock} allowedRoles={["admin", "super_admin"]} />
       <ProtectedRoute path="/products" component={Products} allowedRoles={["admin", "super_admin"]} />
+      <ProtectedRoute path="/net-profit" component={NetProfit} allowedRoles={["admin", "super_admin"]} />
       
       {/* 404 route */}
       <Route component={NotFound} />

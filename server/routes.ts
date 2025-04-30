@@ -6,7 +6,8 @@ import {
   insertInventorySchema, insertStockMovementSchema,
   insertUserSchema, USER_ROLES, EXPENSE_CATEGORIES, STOCK_ACTION_TYPES
 } from "@shared/schema";
-import { format, parseISO, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { format, parseISO, subMonths, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
+import { fr } from "date-fns/locale";
 import { setupAuth, requireAdmin, requireSuperAdmin, requireAdminOrSuperAdmin, hashPassword } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
