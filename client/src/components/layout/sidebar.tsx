@@ -13,7 +13,9 @@ import {
   DollarSign,
   Loader2,
   CakeSlice,
-  ShoppingCart
+  ShoppingCart,
+  PieChart,
+  TrendingUp
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
@@ -101,6 +103,11 @@ export default function Sidebar() {
   // Super Admin has access to everything including management sections
   const superAdminNavItems = [
     ...adminNavItems,
+    {
+      name: "Bénéfice Net",
+      href: "/net-profit",
+      icon: TrendingUp,
+    },
     {
       name: "Gestion des Produits",
       href: "/products",

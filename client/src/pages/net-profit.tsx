@@ -108,7 +108,7 @@ export default function NetProfitPage() {
   const endDate = dateRange?.to || new Date();
 
   // Requête pour le bénéfice net total
-  const { data: netProfitData, isLoading: isLoadingNetProfit } = useQuery({
+  const { data: netProfitData, isLoading: isLoadingNetProfit } = useQuery<NetProfitData>({
     queryKey: [
       `/api/stats/net-profit?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
     ],
@@ -116,7 +116,7 @@ export default function NetProfitPage() {
   });
 
   // Requête pour les données mensuelles
-  const { data: monthlyData, isLoading: isLoadingMonthly } = useQuery({
+  const { data: monthlyData, isLoading: isLoadingMonthly } = useQuery<MonthlyProfitData[]>({
     queryKey: [
       `/api/stats/net-profit/monthly?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
     ],
@@ -124,7 +124,7 @@ export default function NetProfitPage() {
   });
 
   // Requête pour les données quotidiennes
-  const { data: dailyData, isLoading: isLoadingDaily } = useQuery({
+  const { data: dailyData, isLoading: isLoadingDaily } = useQuery<DailyProfitData[]>({
     queryKey: [
       `/api/stats/net-profit/daily?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
     ],
@@ -132,19 +132,19 @@ export default function NetProfitPage() {
   });
 
   // Formater les données pour les graphiques
-  const formattedMonthlyData = monthlyData?.map((item: any) => ({
+  const formattedMonthlyData = monthlyData && monthlyData.length > 0 ? monthlyData.map((item) => ({
     name: item.monthName,
     revenue: item.revenue.total,
     costs: item.costs.total,
     profit: item.netProfit
-  }));
+  })) : [];
 
-  const formattedDailyData = dailyData?.map((item: any) => ({
+  const formattedDailyData = dailyData && dailyData.length > 0 ? dailyData.map((item) => ({
     name: format(new Date(item.date), 'dd/MM'),
     revenue: item.revenue.total,
     costs: item.costs.total,
     profit: item.netProfit
-  }));
+  })) : [];
 
   // Gérer le changement de plage de dates
   const handleDateRangeChange = (range: DateRange | undefined) => {
