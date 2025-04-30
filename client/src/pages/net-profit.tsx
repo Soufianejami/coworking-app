@@ -43,7 +43,8 @@ import {
   TrendingUpIcon,
   TrendingDownIcon,
   CalendarIcon,
-  BarChart3Icon
+  BarChart3Icon,
+  InfoIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -107,26 +108,26 @@ export default function NetProfitPage() {
   const startDate = dateRange?.from || subMonths(new Date(), 3);
   const endDate = dateRange?.to || new Date();
 
-  // Requête pour le bénéfice net total
+  // Requête pour le bénéfice net total - Ne s'exécute que lorsque les deux dates sont définies
   const { data: netProfitData, isLoading: isLoadingNetProfit } = useQuery<NetProfitData>({
     queryKey: [
-      `/api/stats/net-profit?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
+      `/api/stats/net-profit?startDate=${dateRange?.from ? format(startDate, 'yyyy-MM-dd') : ''}&endDate=${dateRange?.to ? format(endDate, 'yyyy-MM-dd') : ''}`
     ],
-    enabled: !!dateRange?.from && !!dateRange?.to
+    enabled: !!dateRange?.from && !!dateRange?.to // Les deux dates doivent être définies
   });
 
-  // Requête pour les données mensuelles
+  // Requête pour les données mensuelles - Ne s'exécute que lorsque les deux dates sont définies
   const { data: monthlyData, isLoading: isLoadingMonthly } = useQuery<MonthlyProfitData[]>({
     queryKey: [
-      `/api/stats/net-profit/monthly?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
+      `/api/stats/net-profit/monthly?startDate=${dateRange?.from ? format(startDate, 'yyyy-MM-dd') : ''}&endDate=${dateRange?.to ? format(endDate, 'yyyy-MM-dd') : ''}`
     ],
     enabled: !!dateRange?.from && !!dateRange?.to && period === "monthly"
   });
 
-  // Requête pour les données quotidiennes
+  // Requête pour les données quotidiennes - Ne s'exécute que lorsque les deux dates sont définies
   const { data: dailyData, isLoading: isLoadingDaily } = useQuery<DailyProfitData[]>({
     queryKey: [
-      `/api/stats/net-profit/daily?startDate=${format(startDate, 'yyyy-MM-dd')}&endDate=${format(endDate, 'yyyy-MM-dd')}`
+      `/api/stats/net-profit/daily?startDate=${dateRange?.from ? format(startDate, 'yyyy-MM-dd') : ''}&endDate=${dateRange?.to ? format(endDate, 'yyyy-MM-dd') : ''}`
     ],
     enabled: !!dateRange?.from && !!dateRange?.to && period === "daily"
   });
@@ -148,9 +149,8 @@ export default function NetProfitPage() {
 
   // Gérer le changement de plage de dates
   const handleDateRangeChange = (range: DateRange | undefined) => {
-    if (range?.from && range?.to) {
-      setDateRange(range);
-    }
+    // Accepter toute plage, même partiellement définie pour permettre une sélection plus intuitive
+    setDateRange(range);
   };
 
   // Gérer le changement de période prédéfinie
@@ -282,9 +282,21 @@ export default function NetProfitPage() {
           {/* Coût total */}
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Coûts Totaux
-              </CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Coûts Totaux
+                </CardTitle>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-80">
+                      <p>Les coûts totaux représentent la somme des coûts d'achat des produits vendus plus les dépenses opérationnelles.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatNumber(netProfitData.costs.total)}</div>
@@ -304,9 +316,21 @@ export default function NetProfitPage() {
           {/* Marge brute */}
           <Card className="shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Marge Brute
-              </CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Marge Brute
+                </CardTitle>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <InfoIcon className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-80">
+                      <p>La marge brute est la différence entre le chiffre d'affaires et le coût d'achat des produits vendus, avant déduction des dépenses opérationnelles.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </CardHeader>
             <CardContent>
               <div className={`text-2xl font-bold ${getProfitColor(netProfitData.grossProfit)}`}>
