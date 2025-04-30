@@ -286,6 +286,281 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint pour calculer le bénéfice net total dans un intervalle
+  app.get(`${apiPrefix}/stats/net-profit`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Both startDate and endDate are required" });
+      }
+      
+      const start = new Date(startDate as string);
+      const end = new Date(endDate as string);
+      
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+      
+      // Get all transactions in the range
+      const transactions = await storage.getTransactionsByDateRange(start, end);
+      
+      // Calculer les revenus par type
+      const entriesRevenue = transactions
+        .filter(t => t.type === 'entry')
+        .reduce((sum, t) => sum + t.amount, 0);
+        
+      const subscriptionsRevenue = transactions
+        .filter(t => t.type === 'subscription')
+        .reduce((sum, t) => sum + t.amount, 0);
+        
+      const cafeRevenue = transactions
+        .filter(t => t.type === 'cafe')
+        .reduce((sum, t) => sum + t.amount, 0);
+      
+      const totalRevenue = entriesRevenue + subscriptionsRevenue + cafeRevenue;
+      
+      // Get all expenses in the range
+      const expenses = await storage.getExpensesByDateRange(start, end);
+      const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+      
+      // Calcul des coûts des produits café vendus (Cost of Goods Sold)
+      let cafeCostOfSales = 0;
+      
+      // Pour chaque transaction de type café
+      for (const transaction of transactions.filter(t => t.type === 'cafe')) {
+        // Si la transaction a des items (produits vendus)
+        if (transaction.items && Array.isArray(transaction.items)) {
+          for (const item of transaction.items) {
+            // Récupérer les informations d'inventaire pour ce produit
+            const inventoryItem = await storage.getInventoryItemByProductId(item.id);
+            if (inventoryItem && inventoryItem.purchasePrice) {
+              // Ajouter le coût de ce produit (prix d'achat × quantité)
+              cafeCostOfSales += inventoryItem.purchasePrice * item.quantity;
+            }
+          }
+        }
+      }
+      
+      // Calcul du bénéfice net
+      const grossProfit = totalRevenue - cafeCostOfSales;
+      const netProfit = grossProfit - totalExpenses;
+      
+      res.json({
+        startDate: start,
+        endDate: end,
+        revenue: {
+          entries: entriesRevenue,
+          subscriptions: subscriptionsRevenue,
+          cafe: cafeRevenue,
+          total: totalRevenue
+        },
+        costs: {
+          cafeProducts: cafeCostOfSales,
+          expenses: totalExpenses,
+          total: cafeCostOfSales + totalExpenses
+        },
+        grossProfit,
+        netProfit
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Endpoint pour calculer le bénéfice net par jour dans un intervalle
+  app.get(`${apiPrefix}/stats/net-profit/daily`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Both startDate and endDate are required" });
+      }
+      
+      const start = new Date(startDate as string);
+      const end = new Date(endDate as string);
+      
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+      
+      // Générer la liste des jours dans l'intervalle
+      const days = [];
+      const currentDate = new Date(start);
+      
+      while (currentDate <= end) {
+        const dayStart = startOfDay(new Date(currentDate));
+        const dayEnd = endOfDay(new Date(currentDate));
+        
+        // Récupérer les transactions de ce jour
+        const dayTransactions = await storage.getTransactionsByDateRange(dayStart, dayEnd);
+        
+        // Récupérer les dépenses de ce jour
+        const dayExpenses = await storage.getExpensesByDateRange(dayStart, dayEnd);
+        
+        // Calculer les revenus par type
+        const entriesRevenue = dayTransactions
+          .filter(t => t.type === 'entry')
+          .reduce((sum, t) => sum + t.amount, 0);
+          
+        const subscriptionsRevenue = dayTransactions
+          .filter(t => t.type === 'subscription')
+          .reduce((sum, t) => sum + t.amount, 0);
+          
+        const cafeRevenue = dayTransactions
+          .filter(t => t.type === 'cafe')
+          .reduce((sum, t) => sum + t.amount, 0);
+        
+        const totalRevenue = entriesRevenue + subscriptionsRevenue + cafeRevenue;
+        const totalExpenses = dayExpenses.reduce((sum, e) => sum + e.amount, 0);
+        
+        // Calculer le coût des produits vendus (café)
+        let cafeCostOfSales = 0;
+        
+        // Pour chaque transaction de type café
+        for (const transaction of dayTransactions.filter(t => t.type === 'cafe')) {
+          // Si la transaction a des items (produits vendus)
+          if (transaction.items && Array.isArray(transaction.items)) {
+            for (const item of transaction.items) {
+              // Récupérer les informations d'inventaire pour ce produit
+              const inventoryItem = await storage.getInventoryItemByProductId(item.id);
+              if (inventoryItem && inventoryItem.purchasePrice) {
+                // Ajouter le coût de ce produit (prix d'achat × quantité)
+                cafeCostOfSales += inventoryItem.purchasePrice * item.quantity;
+              }
+            }
+          }
+        }
+        
+        // Calcul du bénéfice net
+        const grossProfit = totalRevenue - cafeCostOfSales;
+        const netProfit = grossProfit - totalExpenses;
+        
+        days.push({
+          date: dayStart,
+          revenue: {
+            entries: entriesRevenue,
+            subscriptions: subscriptionsRevenue,
+            cafe: cafeRevenue,
+            total: totalRevenue
+          },
+          costs: {
+            cafeProducts: cafeCostOfSales,
+            expenses: totalExpenses,
+            total: cafeCostOfSales + totalExpenses
+          },
+          grossProfit,
+          netProfit
+        });
+        
+        // Passer au jour suivant
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      res.json(days);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Endpoint pour calculer le bénéfice net mensuel dans un intervalle
+  app.get(`${apiPrefix}/stats/net-profit/monthly`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: "Both startDate and endDate are required" });
+      }
+      
+      const start = new Date(startDate as string);
+      const end = new Date(endDate as string);
+      
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+      
+      // Générer la liste des mois dans l'intervalle
+      const months = [];
+      let currentDate = new Date(start.getFullYear(), start.getMonth(), 1);
+      
+      while (currentDate <= end) {
+        const monthStart = startOfMonth(new Date(currentDate));
+        const monthEnd = endOfMonth(new Date(currentDate));
+        
+        // Récupérer les transactions de ce mois
+        const monthTransactions = await storage.getTransactionsByDateRange(monthStart, monthEnd);
+        
+        // Récupérer les dépenses de ce mois
+        const monthExpenses = await storage.getExpensesByDateRange(monthStart, monthEnd);
+        
+        // Calculer les revenus par type
+        const entriesRevenue = monthTransactions
+          .filter(t => t.type === 'entry')
+          .reduce((sum, t) => sum + t.amount, 0);
+          
+        const subscriptionsRevenue = monthTransactions
+          .filter(t => t.type === 'subscription')
+          .reduce((sum, t) => sum + t.amount, 0);
+          
+        const cafeRevenue = monthTransactions
+          .filter(t => t.type === 'cafe')
+          .reduce((sum, t) => sum + t.amount, 0);
+        
+        const totalRevenue = entriesRevenue + subscriptionsRevenue + cafeRevenue;
+        const totalExpenses = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
+        
+        // Calculer le coût des produits vendus (café)
+        let cafeCostOfSales = 0;
+        
+        // Pour chaque transaction de type café
+        for (const transaction of monthTransactions.filter(t => t.type === 'cafe')) {
+          // Si la transaction a des items (produits vendus)
+          if (transaction.items && Array.isArray(transaction.items)) {
+            for (const item of transaction.items) {
+              // Récupérer les informations d'inventaire pour ce produit
+              const inventoryItem = await storage.getInventoryItemByProductId(item.id);
+              if (inventoryItem && inventoryItem.purchasePrice) {
+                // Ajouter le coût de ce produit (prix d'achat × quantité)
+                cafeCostOfSales += inventoryItem.purchasePrice * item.quantity;
+              }
+            }
+          }
+        }
+        
+        // Calcul du bénéfice net
+        const grossProfit = totalRevenue - cafeCostOfSales;
+        const netProfit = grossProfit - totalExpenses;
+        
+        months.push({
+          month: format(monthStart, 'yyyy-MM'),
+          monthName: format(monthStart, 'MMMM yyyy', { locale: fr }),
+          startDate: monthStart,
+          endDate: monthEnd,
+          revenue: {
+            entries: entriesRevenue,
+            subscriptions: subscriptionsRevenue,
+            cafe: cafeRevenue,
+            total: totalRevenue
+          },
+          costs: {
+            cafeProducts: cafeCostOfSales,
+            expenses: totalExpenses,
+            total: cafeCostOfSales + totalExpenses
+          },
+          grossProfit,
+          netProfit
+        });
+        
+        // Passer au mois suivant
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+      
+      res.json(months);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
   // User management routes (admin only)
   app.get(`${apiPrefix}/users`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {

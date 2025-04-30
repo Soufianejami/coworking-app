@@ -139,8 +139,8 @@ export class DatabaseStorage implements IStorage {
             category: "supplies",
             date: new Date(),
             description: `Achat de stock: ${product.name}`,
-            paymentMethod: "cash",
-            createdById: 1 // Utiliser l'ID 1 (admin) par défaut
+            paymentMethod: "cash"
+            // createdById est optionnel, donc on ne le fournit pas
           });
         }
       } catch (error) {
@@ -265,8 +265,8 @@ export class DatabaseStorage implements IStorage {
             category: "supplies",
             date: new Date(),
             description: `Achat de stock: ${product.name} (${quantity} unités)`,
-            paymentMethod: "cash",
-            createdById: userId
+            paymentMethod: "cash"
+            // createdById est optionnel, donc on ne le fournit pas
           });
         }
       } catch (error) {
