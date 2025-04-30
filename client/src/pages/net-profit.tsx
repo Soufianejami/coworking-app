@@ -33,7 +33,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer
 } from "recharts";
@@ -52,6 +52,12 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Définition des types pour les données de l'API
 type RevenueData = {
@@ -477,12 +483,12 @@ export default function NetProfitPage() {
                           interval={Math.ceil(formattedDailyData?.length / 15) - 1}
                         />
                         <YAxis />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: number) => [
                             formatNumber(value), 
                             value === 0 ? "Neutre" : value > 0 ? "Profit" : "Perte"
                           ]}
-                          labelFormatter={(label) => `Jour: ${label}`}
+                          labelFormatter={(label: string) => `Jour: ${label}`}
                         />
                         <Legend />
                         <Line 
@@ -534,12 +540,12 @@ export default function NetProfitPage() {
                           tick={{ fontSize: 12 }}
                         />
                         <YAxis />
-                        <Tooltip 
+                        <RechartsTooltip 
                           formatter={(value: number) => [
                             formatNumber(value), 
                             value === 0 ? "Neutre" : value > 0 ? "Profit" : "Perte"
                           ]}
-                          labelFormatter={(label) => `Mois: ${label}`}
+                          labelFormatter={(label: string) => `Mois: ${label}`}
                         />
                         <Legend />
                         <Bar 
