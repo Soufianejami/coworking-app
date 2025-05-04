@@ -495,7 +495,7 @@ export default function IngredientsPage() {
                     <TableCell>{ingredient.unit}</TableCell>
                     <TableCell className="text-right">{ingredient.purchasePrice || '-'}</TableCell>
                     <TableCell className={`text-right ${ingredient.quantityInStock <= ingredient.minThreshold ? 'text-destructive font-medium' : ''}`}>
-                      {ingredient.quantityInStock}
+                      {Number(ingredient.quantityInStock).toFixed(2)} {ingredient.unit}
                     </TableCell>
                     <TableCell className="text-right">{ingredient.minThreshold}</TableCell>
                     <TableCell className="text-right">
@@ -784,7 +784,7 @@ export default function IngredientsPage() {
                       />
                     </FormControl>
                     <FormDescription>
-                      Stock disponible: {currentIngredient?.quantityInStock} {currentIngredient?.unit}
+                      Stock disponible: {Number(currentIngredient?.quantityInStock).toFixed(2)} {currentIngredient?.unit}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
