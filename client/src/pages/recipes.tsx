@@ -122,17 +122,17 @@ export default function RecipesPage() {
     refetchOnWindowFocus: false
   });
 
-  // Filtrer les produits pour n'afficher que les cafés et boissons actifs
-  // Inclure tous les produits de catégorie café ou beverage qui sont actifs
+  // Filtrer les produits pour n'afficher tous les produits café et boissons, qu'ils soient actifs ou non
+  // Inclure tous les produits de catégorie café, coffee, beverage ou autre
   const cafeProducts = products?.filter(p => 
-    // Vérifier toutes les catégories possibles et leur statut actif
-    (p.category === 'cafe' || p.category === 'beverage' || p.category === 'café') && p.isActive
+    // Vérifier toutes les catégories possibles
+    ['cafe', 'coffee', 'beverage', 'café', 'other'].includes(p.category)
   ) || [];
   
   // Afficher dans la console les produits filtrés et ceux qui ont été exclus pour le débogage
   console.log("Tous les produits:", products);
   console.log("Produits de café filtrés:", cafeProducts);
-  console.log("Produits exclus:", products?.filter(p => !(p.category === 'cafe' || p.category === 'beverage' || p.category === 'café') || !p.isActive));
+  console.log("Produits exclus:", products?.filter(p => !['cafe', 'coffee', 'beverage', 'café', 'other'].includes(p.category)));
 
   // Configuration du formulaire
   const form = useForm<RecipeFormValues>({
