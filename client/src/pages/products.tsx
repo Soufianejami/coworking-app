@@ -262,9 +262,9 @@ export default function ProductsPage() {
     <div className="container mx-auto py-8 px-4">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Gestion des Produits</h1>
+          <h1 className="text-3xl font-bold">Menu Café</h1>
           <p className="text-gray-500">
-            Gérez tous les produits disponibles dans le menu
+            Gérez les boissons et produits qui apparaissent sur le menu client pour la vente
           </p>
         </div>
         <Button onClick={openCreateDialog}>

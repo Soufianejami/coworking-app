@@ -111,12 +111,12 @@ export default function Sidebar() {
       icon: TrendingUp,
     },
     {
-      name: "Gestion des Produits",
+      name: "Menu Café",
       href: "/products",
       icon: ShoppingCart,
     },
     {
-      name: "Gestion du Stock",
+      name: "Produits en Stock",
       href: "/stock",
       icon: CakeSlice,
     },
@@ -126,7 +126,7 @@ export default function Sidebar() {
       icon: Utensils,
     },
     {
-      name: "Recettes",
+      name: "Fiches Techniques",
       href: "/recipes",
       icon: Coffee,
     },
