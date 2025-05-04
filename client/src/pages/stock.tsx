@@ -921,7 +921,8 @@ export default function StockPage() {
                 <Input
                   id="quantity"
                   type="number"
-                  min="1"
+                  min="0.01"
+                  step="0.01"
                   value={addStockForm.quantity}
                   onChange={(e) =>
                     setAddStockForm({ ...addStockForm, quantity: e.target.value })
@@ -988,7 +989,8 @@ export default function StockPage() {
                 <Input
                   id="quantity"
                   type="number"
-                  min="1"
+                  min="0.01"
+                  step="0.01"
                   value={removeStockForm.quantity}
                   onChange={(e) =>
                     setRemoveStockForm({ ...removeStockForm, quantity: e.target.value })
@@ -1072,6 +1074,7 @@ export default function StockPage() {
                   id="newQuantity"
                   type="number"
                   min="0"
+                  step="0.01"
                   value={adjustStockForm.newQuantity}
                   onChange={(e) =>
                     setAdjustStockForm({ ...adjustStockForm, newQuantity: e.target.value })
@@ -1169,7 +1172,7 @@ export default function StockPage() {
                 <Input
                   id="minThreshold"
                   type="number"
-                  min="1"
+                  min="0.01" step="0.01"
                   value={inventoryForm.minThreshold}
                   onChange={(e) =>
                     setInventoryForm({ ...inventoryForm, minThreshold: e.target.value })
@@ -1231,7 +1234,7 @@ export default function StockPage() {
                 <Input
                   id="minThreshold"
                   type="number"
-                  min="1"
+                  min="0.01" step="0.01"
                   value={inventoryForm.minThreshold}
                   onChange={(e) =>
                     setInventoryForm({ ...inventoryForm, minThreshold: e.target.value })
