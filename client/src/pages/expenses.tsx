@@ -488,12 +488,12 @@ export default function ExpensesPage() {
           return (
             <Card key={month} className="mb-6">
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <CalendarIcon className="h-5 w-5 mr-2" />
-                  <span className="capitalize">{monthName}</span>
+                <CardTitle className="flex justify-between items-center">
+                  <span>{monthName}</span>
+                  <span>{formatCurrency(monthTotal)}</span>
                 </CardTitle>
                 <CardDescription>
-                  Total: {formatCurrency(monthTotal)}
+                  {monthExpenses.length} dépense{monthExpenses.length > 1 ? "s" : ""}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -502,63 +502,88 @@ export default function ExpensesPage() {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Catégorie</TableHead>
+                      <TableHead>Nom</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead className="text-right">Montant</TableHead>
                       {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {monthExpenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell>{formatDate(expense.date, "dd/MM/yyyy")}</TableCell>
-                        <TableCell>
-                          <Badge variant={getCategoryBadgeVariant(expense.category) as any}>
-                            {getCategoryName(expense.category)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{expense.description || "-"}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(Number(expense.amount))}
-                        </TableCell>
-                        {isAdmin && (
-                          <TableCell className="text-right space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEditExpense(expense)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Êtes-vous sûr de vouloir supprimer cette dépense ?
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Cette action est irréversible.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteExpense(expense.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Supprimer
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                    {monthExpenses.map((expense) => {
+                      // Extraire le nom du produit/ingrédient de la description
+                      let name = "-";
+                      const descText = expense.description || "";
+                      
+                      // Pour les produits
+                      if (descText.startsWith("Produit:")) {
+                        const match = descText.match(/Produit: ([^(]+)/);
+                        if (match && match[1]) {
+                          name = match[1].trim();
+                        }
+                      }
+                      // Pour les ingrédients
+                      else if (descText.startsWith("Ingrédient:")) {
+                        const match = descText.match(/Ingrédient: ([^(]+)/);
+                        if (match && match[1]) {
+                          name = match[1].trim();
+                        }
+                      }
+                      
+                      return (
+                        <TableRow key={expense.id}>
+                          <TableCell>{formatDate(expense.date, "dd/MM/yyyy")}</TableCell>
+                          <TableCell>
+                            <Badge variant={getCategoryBadgeVariant(expense.category) as any}>
+                              {getCategoryName(expense.category)}
+                            </Badge>
                           </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
+                          <TableCell className="font-medium">
+                            {name}
+                          </TableCell>
+                          <TableCell>{expense.description || "-"}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(Number(expense.amount))}
+                          </TableCell>
+                          {isAdmin && (
+                            <TableCell className="text-right space-x-2">
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditExpense(expense)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="outline" size="sm">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Êtes-vous sûr de vouloir supprimer cette dépense ?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Cette action est irréversible.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDeleteExpense(expense.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Supprimer
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </CardContent>
