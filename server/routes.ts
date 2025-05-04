@@ -758,6 +758,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid expense ID" });
       }
       
+      // S'assurer que la date est correctement formatée
+      if (req.body.date && typeof req.body.date === 'string') {
+        try {
+          // Convertir la chaîne de date en objet Date
+          req.body.date = new Date(req.body.date);
+        } catch (dateError) {
+          return res.status(400).json({ message: "Format de date invalide" });
+        }
+      }
+      
       const updatedExpense = await storage.updateExpense(id, req.body);
       if (!updatedExpense) {
         return res.status(404).json({ message: "Expense not found" });

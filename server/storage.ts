@@ -288,16 +288,31 @@ export class DatabaseStorage implements IStorage {
         const [product] = await db.select().from(products).where(eq(products.id, productId));
         
         if (product) {
-          // Créer une dépense correspondant à l'ajout de stock
-          await this.createExpense({
-            amount: invItem.purchasePrice * quantity, // Total du coût = prix unitaire × quantité ajoutée
-            // Utiliser la catégorie "other" qui est plus flexible
-            category: "other",
-            date: new Date(),
-            description: `Produit: ${product.name} (${quantity} unités)`,
-            paymentMethod: "cash"
-            // createdById est optionnel, donc on ne le fournit pas
-          });
+          // Vérifions d'abord si une dépense similaire n'a pas déjà été créée récemment
+          // pour éviter les doublons (par exemple dans les 5 dernières minutes)
+          const fiveMinutesAgo = new Date(new Date().getTime() - 5 * 60 * 1000);
+          const existingExpenses = await db.select()
+            .from(expenses)
+            .where(and(
+              gte(expenses.date, fiveMinutesAgo),
+              eq(expenses.description, `Produit: ${product.name} (${quantity} unités)`)
+            ));
+          
+          // N'ajouter une dépense que si aucune dépense similaire n'a été trouvée
+          if (existingExpenses.length === 0) {
+            // Créer une dépense correspondant à l'ajout de stock
+            await this.createExpense({
+              amount: invItem.purchasePrice * quantity, // Total du coût = prix unitaire × quantité ajoutée
+              // Utiliser la catégorie "supplies" pour les produits
+              category: "supplies", 
+              date: new Date(),
+              description: `Produit: ${product.name} (${quantity} unités)`,
+              paymentMethod: "cash"
+              // createdById est optionnel, donc on ne le fournit pas
+            });
+          } else {
+            console.log("Dépense similaire déjà existante, évitement du doublon");
+          }
         }
       } catch (error) {
         console.error("Erreur lors de la création de la dépense pour l'ajout de stock:", error);
@@ -1000,14 +1015,29 @@ export class DatabaseStorage implements IStorage {
     // Si l'ingrédient a un prix d'achat, créer automatiquement une dépense
     if (ingredient.purchasePrice && ingredient.purchasePrice > 0) {
       try {
-        await this.createExpense({
-          amount: ingredient.purchasePrice * quantity,
-          // Utiliser la catégorie "other" pour les ingrédients, qui est plus flexible
-          category: "other",
-          date: new Date(),
-          description: `Ingrédient: ${ingredient.name} (${quantity} ${ingredient.unit})`,
-          paymentMethod: "cash"
-        });
+        // Vérifions d'abord si une dépense similaire n'a pas déjà été créée récemment
+        // pour éviter les doublons (par exemple dans les 5 dernières minutes)
+        const fiveMinutesAgo = new Date(new Date().getTime() - 5 * 60 * 1000);
+        const existingExpenses = await db.select()
+          .from(expenses)
+          .where(and(
+            gte(expenses.date, fiveMinutesAgo),
+            eq(expenses.description, `Ingrédient: ${ingredient.name} (${quantity} ${ingredient.unit})`)
+          ));
+        
+        // N'ajouter une dépense que si aucune dépense similaire n'a été trouvée
+        if (existingExpenses.length === 0) {
+          await this.createExpense({
+            amount: ingredient.purchasePrice * quantity,
+            // Utiliser la catégorie "supplies" de manière constante pour tous les ingrédients
+            category: "supplies",
+            date: new Date(),
+            description: `Ingrédient: ${ingredient.name} (${quantity} ${ingredient.unit})`,
+            paymentMethod: "cash"
+          });
+        } else {
+          console.log("Dépense similaire déjà existante pour l'ingrédient, évitement du doublon");
+        }
       } catch (error) {
         console.error("Erreur lors de la création de la dépense pour le réapprovisionnement:", error);
         // On ne bloque pas l'ajout de stock si la dépense échoue
