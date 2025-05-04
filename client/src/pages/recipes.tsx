@@ -504,9 +504,9 @@ export default function RecipesPage() {
                     <TableCell>{recipe.product.price} DH</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {recipe.ingredients.map((ing) => (
+                        {recipe.ingredients && recipe.ingredients.map((ing) => (
                           <Badge key={ing.id} variant="outline" className="whitespace-nowrap">
-                            {ing.ingredient.name}: {ing.quantity} {ing.ingredient.unit}
+                            {ing.ingredient?.name || 'Ingrédient'}: {ing.quantity} {ing.ingredient?.unit || ''}
                           </Badge>
                         ))}
                       </div>
