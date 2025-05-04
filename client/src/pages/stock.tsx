@@ -1175,7 +1175,7 @@ export default function StockPage() {
                   min="0.01" step="0.01"
                   value={inventoryForm.minThreshold}
                   onChange={(e) =>
-                    setInventoryForm({ ...inventoryForm, minThreshold: parseFloat(e.target.value) || 0.01 })
+                    setInventoryForm({ ...inventoryForm, minThreshold: e.target.value })
                   }
                   required
                 />
@@ -1190,7 +1190,7 @@ export default function StockPage() {
                   placeholder="Prix d'achat unitaire"
                   value={inventoryForm.purchasePrice}
                   onChange={(e) =>
-                    setInventoryForm({ ...inventoryForm, purchasePrice: parseFloat(e.target.value) || 0 })
+                    setInventoryForm({ ...inventoryForm, purchasePrice: e.target.value })
                   }
                 />
               </div>
@@ -1237,7 +1237,7 @@ export default function StockPage() {
                   min="0.01" step="0.01"
                   value={inventoryForm.minThreshold}
                   onChange={(e) =>
-                    setInventoryForm({ ...inventoryForm, minThreshold: parseFloat(e.target.value) || 0.01 })
+                    setInventoryForm({ ...inventoryForm, minThreshold: e.target.value })
                   }
                   required
                 />
@@ -1252,7 +1252,7 @@ export default function StockPage() {
                   placeholder="Prix d'achat unitaire"
                   value={inventoryForm.purchasePrice}
                   onChange={(e) =>
-                    setInventoryForm({ ...inventoryForm, purchasePrice: parseFloat(e.target.value) || 0 })
+                    setInventoryForm({ ...inventoryForm, purchasePrice: e.target.value })
                   }
                 />
               </div>
