@@ -426,7 +426,13 @@ export default function RecipesPage() {
                             <FormItem className="w-32">
                               <FormLabel>Quantité</FormLabel>
                               <FormControl>
-                                <Input type="number" min="0.01" step="0.01" {...field} />
+                                <Input 
+                                  type="number" 
+                                  min="0.01" 
+                                  step="0.01" 
+                                  {...field} 
+                                  onChange={(e) => field.onChange(parseFloat(e.target.value) || 0.01)}
+                                />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -686,7 +692,13 @@ export default function RecipesPage() {
                           <FormItem className="w-32">
                             <FormLabel>Quantité</FormLabel>
                             <FormControl>
-                              <Input type="number" min="0.01" step="0.01" {...field} />
+                              <Input 
+                                type="number" 
+                                min="0.01" 
+                                step="0.01" 
+                                {...field} 
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0.01)}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
