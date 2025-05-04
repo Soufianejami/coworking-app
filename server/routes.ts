@@ -81,6 +81,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.delete(`${apiPrefix}/products/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+      
+      const success = await storage.deleteProduct(id);
+      if (!success) {
+        return res.status(404).json({ message: "Product not found or could not be deleted" });
+      }
+      
+      res.status(200).json({ message: "Product successfully deleted" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
   // Transaction routes
   app.get(`${apiPrefix}/transactions`, async (req: Request, res: Response) => {
     try {

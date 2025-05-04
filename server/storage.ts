@@ -586,6 +586,48 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0 ? result[0] : undefined;
   }
   
+  async deleteProduct(id: number): Promise<boolean> {
+    try {
+      // Vérifier si le produit existe dans l'inventaire
+      const inventoryItem = await this.getInventoryItemByProductId(id);
+      
+      // Si le produit a un inventaire associé, nous devons d'abord le supprimer
+      if (inventoryItem) {
+        // Supprimer tous les mouvements de stock associés
+        await db.delete(stockMovements)
+          .where(eq(stockMovements.inventoryId, inventoryItem.id));
+          
+        // Supprimer l'élément d'inventaire
+        await db.delete(inventory)
+          .where(eq(inventory.id, inventoryItem.id));
+      }
+      
+      // Vérifier si le produit a une recette associée
+      const recipe = await this.getRecipeByProduct(id);
+      
+      // Si le produit a une recette, nous devons d'abord la supprimer
+      if (recipe) {
+        // Supprimer tous les ingrédients de la recette
+        await db.delete(recipeIngredients)
+          .where(eq(recipeIngredients.recipeId, recipe.id));
+          
+        // Supprimer la recette
+        await db.delete(recipes)
+          .where(eq(recipes.id, recipe.id));
+      }
+      
+      // Enfin, supprimer le produit
+      const result = await db.delete(products)
+        .where(eq(products.id, id))
+        .returning();
+        
+      return result.length > 0;
+    } catch (error) {
+      console.error("Erreur lors de la suppression du produit:", error);
+      return false;
+    }
+  }
+  
   // Transactions
   async getAllTransactions(limit?: number, offset = 0): Promise<Transaction[]> {
     const query = db.select()

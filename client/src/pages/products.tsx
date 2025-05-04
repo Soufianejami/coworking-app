@@ -568,12 +568,29 @@ export default function ProductsPage() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                // Cette fonctionnalité nécessite d'ajouter une méthode DELETE dans l'API
-                toast({
-                  title: "Information",
-                  description: "La suppression de produits n'est pas encore implémentée. Désactivez plutôt le produit.",
-                });
+              onClick={async () => {
+                if (!productToDelete) return;
+                
+                try {
+                  const res = await apiRequest("DELETE", `/api/products/${productToDelete.id}`);
+                  if (res.ok) {
+                    queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+                    toast({
+                      title: "Produit supprimé",
+                      description: "Le produit a été supprimé avec succès.",
+                    });
+                  } else {
+                    const errorData = await res.json();
+                    throw new Error(errorData.message || "Erreur lors de la suppression du produit");
+                  }
+                } catch (error: any) {
+                  toast({
+                    title: "Erreur",
+                    description: error.message || "Erreur lors de la suppression du produit",
+                    variant: "destructive",
+                  });
+                }
+                
                 setDeleteDialogOpen(false);
                 setProductToDelete(null);
               }}
