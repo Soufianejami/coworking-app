@@ -528,6 +528,13 @@ export default function ExpensesPage() {
                           name = match[1].trim();
                         }
                       }
+                      // Pour les achats d'ingrédients
+                      else if (descText.startsWith("Achat d'ingrédient:")) {
+                        const match = descText.match(/Achat d'ingrédient: ([^\s]+)/);
+                        if (match && match[1]) {
+                          name = match[1].trim();
+                        }
+                      }
                       
                       return (
                         <TableRow key={expense.id}>
