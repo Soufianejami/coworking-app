@@ -263,10 +263,12 @@ export default function RecipesPage() {
       name: recipe.name,
       description: recipe.description || '',
       productId: recipe.productId.toString(),
-      ingredients: recipe.ingredients.map(ing => ({
-        ingredientId: ing.ingredientId.toString(),
-        quantity: ing.quantity
-      }))
+      ingredients: recipe.ingredients && recipe.ingredients.length > 0 
+        ? recipe.ingredients.map(ing => ({
+            ingredientId: ing.ingredientId.toString(),
+            quantity: ing.quantity
+          }))
+        : [{ ingredientId: '', quantity: 0.01 }]
     });
     
     setIsEditDialogOpen(true);
@@ -510,11 +512,15 @@ export default function RecipesPage() {
                     <TableCell>{recipe.product.price} DH</TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {recipe.ingredients && recipe.ingredients.map((ing) => (
-                          <Badge key={ing.id} variant="outline" className="whitespace-nowrap">
-                            {ing.ingredient?.name || 'Ingrédient'}: {ing.quantity} {ing.ingredient?.unit || ''}
-                          </Badge>
-                        ))}
+                        {recipe.ingredients && recipe.ingredients.length > 0 ? (
+                          recipe.ingredients.map((ing) => (
+                            <Badge key={ing.id} variant="outline" className="whitespace-nowrap">
+                              {ing.ingredient?.name || 'Ingrédient'}: {Number(ing.quantity).toFixed(2)} {ing.ingredient?.unit || ''}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant="outline">Aucun ingrédient</Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
