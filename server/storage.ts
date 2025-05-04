@@ -11,7 +11,7 @@ import {
 } from "@shared/schema";
 import { startOfDay, endOfDay, format, parseISO, addMonths } from "date-fns";
 import { db } from "./db";
-import { eq, gte, lte, desc, and, asc } from "drizzle-orm";
+import { eq, gte, lte, desc, and, asc, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -864,6 +864,482 @@ export class DatabaseStorage implements IStorage {
       console.log("Default admin user created with username: admin and password: admin");
       console.log("Default super_admin user created with username: superadmin and password: superadmin");
     }
+  }
+
+  // Implémentation pour les ingrédients
+  async getAllIngredients(): Promise<Ingredient[]> {
+    return await db
+      .select()
+      .from(ingredients)
+      .orderBy(asc(ingredients.name));
+  }
+  
+  async getIngredient(id: number): Promise<Ingredient | undefined> {
+    const result = await db
+      .select()
+      .from(ingredients)
+      .where(eq(ingredients.id, id));
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async createIngredient(ingredient: InsertIngredient): Promise<Ingredient> {
+    const result = await db.insert(ingredients).values({
+      ...ingredient,
+      updatedAt: new Date()
+    }).returning();
+    
+    // Si un prix d'achat est défini, créer automatiquement une dépense
+    if (ingredient.purchasePrice && ingredient.purchasePrice > 0 && ingredient.quantityInStock && ingredient.quantityInStock > 0) {
+      try {
+        // Créer une dépense correspondant à l'achat de l'ingrédient
+        await this.createExpense({
+          amount: ingredient.purchasePrice * ingredient.quantityInStock,
+          category: "supplies",
+          date: new Date(),
+          description: `Achat d'ingrédient: ${ingredient.name}`,
+          paymentMethod: "cash"
+        });
+      } catch (error) {
+        console.error("Erreur lors de la création de la dépense pour l'ingrédient:", error);
+        // On ne bloque pas la création de l'ingrédient si la dépense échoue
+      }
+    }
+    
+    return result[0];
+  }
+  
+  async updateIngredient(id: number, ingredient: Partial<Ingredient>): Promise<Ingredient | undefined> {
+    const result = await db.update(ingredients)
+      .set({
+        ...ingredient,
+        updatedAt: new Date()
+      })
+      .where(eq(ingredients.id, id))
+      .returning();
+    
+    return result.length > 0 ? result[0] : undefined;
+  }
+  
+  async deleteIngredient(id: number): Promise<boolean> {
+    // Vérifier si l'ingrédient est utilisé dans des recettes
+    const recipeIngredientCount = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(recipeIngredients)
+      .where(eq(recipeIngredients.ingredientId, id));
+    
+    if (recipeIngredientCount[0].count > 0) {
+      throw new Error("Impossible de supprimer cet ingrédient car il est utilisé dans des recettes");
+    }
+    
+    // Supprimer les mouvements d'ingrédients associés
+    await db.delete(ingredientMovements)
+      .where(eq(ingredientMovements.ingredientId, id));
+    
+    // Supprimer l'ingrédient
+    const result = await db.delete(ingredients)
+      .where(eq(ingredients.id, id))
+      .returning();
+    
+    return result.length > 0;
+  }
+  
+  async getLowStockIngredients(threshold?: number): Promise<Ingredient[]> {
+    if (threshold) {
+      return await db
+        .select()
+        .from(ingredients)
+        .where(lte(ingredients.quantityInStock, threshold))
+        .orderBy(asc(ingredients.quantityInStock));
+    } else {
+      return await db
+        .select()
+        .from(ingredients)
+        .where(lte(ingredients.quantityInStock, ingredients.minThreshold))
+        .orderBy(asc(ingredients.quantityInStock));
+    }
+  }
+  
+  // Mouvements d'ingrédients
+  async addIngredientStock(
+    ingredientId: number,
+    quantity: number,
+    userId: number,
+    reason?: string
+  ): Promise<{ ingredient: Ingredient, movement: IngredientMovement }> {
+    if (quantity <= 0) {
+      throw new Error("La quantité doit être positive lors de l'ajout de stock");
+    }
+    
+    // Récupérer l'ingrédient
+    const ingredient = await this.getIngredient(ingredientId);
+    if (!ingredient) {
+      throw new Error(`L'ingrédient avec l'ID ${ingredientId} n'existe pas`);
+    }
+    
+    // Mettre à jour l'ingrédient
+    const updatedIngredient = await this.updateIngredient(ingredientId, {
+      quantityInStock: ingredient.quantityInStock + quantity,
+      lastRestockDate: new Date()
+    });
+    
+    if (!updatedIngredient) {
+      throw new Error(`Échec de la mise à jour du stock pour l'ingrédient ID ${ingredientId}`);
+    }
+    
+    // Enregistrer le mouvement de stock
+    const [movement] = await db.insert(ingredientMovements).values({
+      ingredientId,
+      quantity,
+      actionType: "add",
+      reason,
+      performedById: userId
+    }).returning();
+    
+    // Si l'ingrédient a un prix d'achat, créer automatiquement une dépense
+    if (ingredient.purchasePrice && ingredient.purchasePrice > 0) {
+      try {
+        await this.createExpense({
+          amount: ingredient.purchasePrice * quantity,
+          category: "supplies",
+          date: new Date(),
+          description: `Réapprovisionnement: ${ingredient.name}`,
+          paymentMethod: "cash"
+        });
+      } catch (error) {
+        console.error("Erreur lors de la création de la dépense pour le réapprovisionnement:", error);
+        // On ne bloque pas l'ajout de stock si la dépense échoue
+      }
+    }
+    
+    return { ingredient: updatedIngredient, movement };
+  }
+  
+  async removeIngredientStock(
+    ingredientId: number,
+    quantity: number,
+    userId: number,
+    reason?: string,
+    transactionId?: number,
+    recipeId?: number
+  ): Promise<{ ingredient: Ingredient, movement: IngredientMovement }> {
+    if (quantity <= 0) {
+      throw new Error("La quantité doit être positive lors du retrait de stock");
+    }
+    
+    // Récupérer l'ingrédient
+    const ingredient = await this.getIngredient(ingredientId);
+    if (!ingredient) {
+      throw new Error(`L'ingrédient avec l'ID ${ingredientId} n'existe pas`);
+    }
+    
+    // Vérifier que la quantité en stock est suffisante
+    if (ingredient.quantityInStock < quantity) {
+      throw new Error(`Stock insuffisant pour l'ingrédient ${ingredient.name}. Disponible: ${ingredient.quantityInStock}, Demandé: ${quantity}`);
+    }
+    
+    // Mettre à jour l'ingrédient
+    const updatedIngredient = await this.updateIngredient(ingredientId, {
+      quantityInStock: ingredient.quantityInStock - quantity
+    });
+    
+    if (!updatedIngredient) {
+      throw new Error(`Échec de la mise à jour du stock pour l'ingrédient ID ${ingredientId}`);
+    }
+    
+    // Enregistrer le mouvement de stock (négatif pour un retrait)
+    const [movement] = await db.insert(ingredientMovements).values({
+      ingredientId,
+      quantity: -quantity, // Négatif pour indiquer un retrait
+      actionType: "remove",
+      reason,
+      transactionId,
+      recipeId,
+      performedById: userId
+    }).returning();
+    
+    return { ingredient: updatedIngredient, movement };
+  }
+  
+  async adjustIngredientStock(
+    ingredientId: number,
+    newQuantity: number,
+    userId: number,
+    reason?: string
+  ): Promise<{ ingredient: Ingredient, movement: IngredientMovement }> {
+    if (newQuantity < 0) {
+      throw new Error("La nouvelle quantité ne peut pas être négative");
+    }
+    
+    // Récupérer l'ingrédient
+    const ingredient = await this.getIngredient(ingredientId);
+    if (!ingredient) {
+      throw new Error(`L'ingrédient avec l'ID ${ingredientId} n'existe pas`);
+    }
+    
+    // Calculer la différence de quantité
+    const quantityDifference = newQuantity - ingredient.quantityInStock;
+    
+    // Mettre à jour l'ingrédient
+    const updatedIngredient = await this.updateIngredient(ingredientId, {
+      quantityInStock: newQuantity
+    });
+    
+    if (!updatedIngredient) {
+      throw new Error(`Échec de la mise à jour du stock pour l'ingrédient ID ${ingredientId}`);
+    }
+    
+    // Enregistrer le mouvement de stock
+    const [movement] = await db.insert(ingredientMovements).values({
+      ingredientId,
+      quantity: quantityDifference,
+      actionType: "adjust",
+      reason: reason || `Ajustement manuel de ${ingredient.quantityInStock} à ${newQuantity}`,
+      performedById: userId
+    }).returning();
+    
+    return { ingredient: updatedIngredient, movement };
+  }
+  
+  async getIngredientMovements(limit?: number, offset = 0): Promise<(IngredientMovement & { ingredient: Ingredient })[]> {
+    return await db
+      .select({
+        id: ingredientMovements.id,
+        ingredientId: ingredientMovements.ingredientId,
+        quantity: ingredientMovements.quantity,
+        actionType: ingredientMovements.actionType,
+        reason: ingredientMovements.reason,
+        transactionId: ingredientMovements.transactionId,
+        recipeId: ingredientMovements.recipeId,
+        performedById: ingredientMovements.performedById,
+        timestamp: ingredientMovements.timestamp,
+        ingredient: ingredients
+      })
+      .from(ingredientMovements)
+      .innerJoin(ingredients, eq(ingredientMovements.ingredientId, ingredients.id))
+      .orderBy(desc(ingredientMovements.timestamp))
+      .limit(limit || 100)
+      .offset(offset);
+  }
+  
+  async getIngredientMovementsByIngredient(ingredientId: number): Promise<(IngredientMovement & { ingredient: Ingredient })[]> {
+    return await db
+      .select({
+        id: ingredientMovements.id,
+        ingredientId: ingredientMovements.ingredientId,
+        quantity: ingredientMovements.quantity,
+        actionType: ingredientMovements.actionType,
+        reason: ingredientMovements.reason,
+        transactionId: ingredientMovements.transactionId,
+        recipeId: ingredientMovements.recipeId,
+        performedById: ingredientMovements.performedById,
+        timestamp: ingredientMovements.timestamp,
+        ingredient: ingredients
+      })
+      .from(ingredientMovements)
+      .innerJoin(ingredients, eq(ingredientMovements.ingredientId, ingredients.id))
+      .where(eq(ingredientMovements.ingredientId, ingredientId))
+      .orderBy(desc(ingredientMovements.timestamp));
+  }
+  
+  // Recettes
+  async getAllRecipes(): Promise<(Recipe & { product: Product })[]> {
+    return await db
+      .select({
+        id: recipes.id,
+        productId: recipes.productId,
+        name: recipes.name,
+        description: recipes.description,
+        createdAt: recipes.createdAt,
+        updatedAt: recipes.updatedAt,
+        product: products
+      })
+      .from(recipes)
+      .innerJoin(products, eq(recipes.productId, products.id))
+      .orderBy(asc(recipes.name));
+  }
+  
+  async getRecipe(id: number): Promise<(Recipe & { product: Product, ingredients: (RecipeIngredient & { ingredient: Ingredient })[] }) | undefined> {
+    // Récupérer la recette avec le produit associé
+    const recipeResult = await db
+      .select({
+        id: recipes.id,
+        productId: recipes.productId,
+        name: recipes.name,
+        description: recipes.description,
+        createdAt: recipes.createdAt,
+        updatedAt: recipes.updatedAt,
+        product: products
+      })
+      .from(recipes)
+      .innerJoin(products, eq(recipes.productId, products.id))
+      .where(eq(recipes.id, id));
+    
+    if (recipeResult.length === 0) {
+      return undefined;
+    }
+    
+    const recipe = recipeResult[0];
+    
+    // Récupérer tous les ingrédients de la recette
+    const recipeIngredientsResult = await db
+      .select({
+        id: recipeIngredients.id,
+        recipeId: recipeIngredients.recipeId,
+        ingredientId: recipeIngredients.ingredientId,
+        quantity: recipeIngredients.quantity,
+        createdAt: recipeIngredients.createdAt,
+        updatedAt: recipeIngredients.updatedAt,
+        ingredient: ingredients
+      })
+      .from(recipeIngredients)
+      .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
+      .where(eq(recipeIngredients.recipeId, id));
+    
+    return {
+      ...recipe,
+      ingredients: recipeIngredientsResult
+    };
+  }
+  
+  async getRecipeByProduct(productId: number): Promise<(Recipe & { ingredients: (RecipeIngredient & { ingredient: Ingredient })[] }) | undefined> {
+    // Récupérer la recette associée au produit
+    const recipeResult = await db
+      .select()
+      .from(recipes)
+      .where(eq(recipes.productId, productId));
+    
+    if (recipeResult.length === 0) {
+      return undefined;
+    }
+    
+    const recipe = recipeResult[0];
+    
+    // Récupérer tous les ingrédients de la recette
+    const recipeIngredientsResult = await db
+      .select({
+        id: recipeIngredients.id,
+        recipeId: recipeIngredients.recipeId,
+        ingredientId: recipeIngredients.ingredientId,
+        quantity: recipeIngredients.quantity,
+        createdAt: recipeIngredients.createdAt,
+        updatedAt: recipeIngredients.updatedAt,
+        ingredient: ingredients
+      })
+      .from(recipeIngredients)
+      .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
+      .where(eq(recipeIngredients.recipeId, recipe.id));
+    
+    return {
+      ...recipe,
+      ingredients: recipeIngredientsResult
+    };
+  }
+  
+  async createRecipe(recipe: InsertRecipe, ingredientsList: { ingredientId: number, quantity: number }[]): Promise<Recipe> {
+    // Vérifier si le produit existe déjà
+    const existingRecipe = await db
+      .select()
+      .from(recipes)
+      .where(eq(recipes.productId, recipe.productId));
+    
+    if (existingRecipe.length > 0) {
+      throw new Error(`Une recette existe déjà pour le produit avec l'ID ${recipe.productId}`);
+    }
+    
+    // Créer la recette
+    const [newRecipe] = await db.insert(recipes).values({
+      ...recipe,
+      updatedAt: new Date()
+    }).returning();
+    
+    // Ajouter les ingrédients à la recette
+    for (const item of ingredientsList) {
+      await db.insert(recipeIngredients).values({
+        recipeId: newRecipe.id,
+        ingredientId: item.ingredientId,
+        quantity: item.quantity,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+    
+    return newRecipe;
+  }
+  
+  async updateRecipe(id: number, recipe: Partial<Recipe>, ingredients?: { ingredientId: number, quantity: number }[]): Promise<Recipe | undefined> {
+    // Mettre à jour la recette
+    const result = await db.update(recipes)
+      .set({
+        ...recipe,
+        updatedAt: new Date()
+      })
+      .where(eq(recipes.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      return undefined;
+    }
+    
+    // Si des ingrédients sont fournis, mettre à jour les ingrédients de la recette
+    if (ingredients && ingredients.length > 0) {
+      // Supprimer les ingrédients existants
+      await db.delete(recipeIngredients)
+        .where(eq(recipeIngredients.recipeId, id));
+      
+      // Ajouter les nouveaux ingrédients
+      for (const item of ingredients) {
+        await db.insert(recipeIngredients).values({
+          recipeId: id,
+          ingredientId: item.ingredientId,
+          quantity: item.quantity,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      }
+    }
+    
+    return result[0];
+  }
+  
+  async deleteRecipe(id: number): Promise<boolean> {
+    // Supprimer les ingrédients de la recette
+    await db.delete(recipeIngredients)
+      .where(eq(recipeIngredients.recipeId, id));
+    
+    // Supprimer la recette
+    const result = await db.delete(recipes)
+      .where(eq(recipes.id, id))
+      .returning();
+    
+    return result.length > 0;
+  }
+  
+  // Utilisation de recette lors d'une vente
+  async useRecipeForTransaction(recipeId: number, userId: number, transactionId: number): Promise<IngredientMovement[]> {
+    // Récupérer la recette avec ses ingrédients
+    const recipe = await this.getRecipe(recipeId);
+    if (!recipe) {
+      throw new Error(`La recette avec l'ID ${recipeId} n'existe pas`);
+    }
+    
+    const movements: IngredientMovement[] = [];
+    
+    // Pour chaque ingrédient, déduire la quantité du stock
+    for (const recipeIngredient of recipe.ingredients) {
+      const { movement } = await this.removeIngredientStock(
+        recipeIngredient.ingredientId,
+        recipeIngredient.quantity,
+        userId,
+        `Utilisé pour préparer ${recipe.name}`,
+        transactionId,
+        recipeId
+      );
+      
+      movements.push(movement);
+    }
+    
+    return movements;
   }
   
   // Ingrédients

@@ -984,6 +984,307 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ---- NOUVELLES ROUTES POUR INGRÉDIENTS ET RECETTES ----
+  
+  // Routes pour les ingrédients
+  app.get(`${apiPrefix}/ingredients`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const ingredients = await storage.getAllIngredients();
+      res.json(ingredients);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get(`${apiPrefix}/ingredients/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID d'ingrédient invalide" });
+      }
+      
+      const ingredient = await storage.getIngredient(id);
+      if (!ingredient) {
+        return res.status(404).json({ message: "Ingrédient non trouvé" });
+      }
+      
+      res.json(ingredient);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post(`${apiPrefix}/ingredients`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const ingredientData = insertIngredientSchema.parse(req.body);
+      const newIngredient = await storage.createIngredient(ingredientData);
+      res.status(201).json(newIngredient);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.patch(`${apiPrefix}/ingredients/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID d'ingrédient invalide" });
+      }
+      
+      const updatedIngredient = await storage.updateIngredient(id, req.body);
+      if (!updatedIngredient) {
+        return res.status(404).json({ message: "Ingrédient non trouvé" });
+      }
+      
+      res.json(updatedIngredient);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.delete(`${apiPrefix}/ingredients/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID d'ingrédient invalide" });
+      }
+      
+      const result = await storage.deleteIngredient(id);
+      if (!result) {
+        return res.status(404).json({ message: "Ingrédient non trouvé" });
+      }
+      
+      res.status(200).json({ message: "Ingrédient supprimé avec succès" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.get(`${apiPrefix}/ingredients/low-stock`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const threshold = req.query.threshold ? parseInt(req.query.threshold as string) : undefined;
+      const ingredients = await storage.getLowStockIngredients(threshold);
+      res.json(ingredients);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Routes pour la gestion du stock d'ingrédients
+  app.post(`${apiPrefix}/ingredients/:id/add-stock`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID d'ingrédient invalide" });
+      }
+      
+      const { quantity, reason } = req.body;
+      if (!quantity || isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ message: "Quantité invalide" });
+      }
+      
+      const userId = (req.user as any).id;
+      const result = await storage.addIngredientStock(id, quantity, userId, reason);
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.post(`${apiPrefix}/ingredients/:id/remove-stock`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID d'ingrédient invalide" });
+      }
+      
+      const { quantity, reason, transactionId, recipeId } = req.body;
+      if (!quantity || isNaN(quantity) || quantity <= 0) {
+        return res.status(400).json({ message: "Quantité invalide" });
+      }
+      
+      const userId = (req.user as any).id;
+      const result = await storage.removeIngredientStock(id, quantity, userId, reason, transactionId, recipeId);
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.post(`${apiPrefix}/ingredients/:id/adjust-stock`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID d'ingrédient invalide" });
+      }
+      
+      const { newQuantity, reason } = req.body;
+      if (newQuantity === undefined || isNaN(newQuantity) || newQuantity < 0) {
+        return res.status(400).json({ message: "Nouvelle quantité invalide" });
+      }
+      
+      const userId = (req.user as any).id;
+      const result = await storage.adjustIngredientStock(id, newQuantity, userId, reason);
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.get(`${apiPrefix}/ingredient-movements`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+      
+      const movements = await storage.getIngredientMovements(limit, offset);
+      res.json(movements);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get(`${apiPrefix}/ingredient-movements/:ingredientId`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const ingredientId = parseInt(req.params.ingredientId);
+      if (isNaN(ingredientId)) {
+        return res.status(400).json({ message: "ID d'ingrédient invalide" });
+      }
+      
+      const movements = await storage.getIngredientMovementsByIngredient(ingredientId);
+      res.json(movements);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Routes pour les recettes
+  app.get(`${apiPrefix}/recipes`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const recipes = await storage.getAllRecipes();
+      res.json(recipes);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get(`${apiPrefix}/recipes/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de recette invalide" });
+      }
+      
+      const recipe = await storage.getRecipe(id);
+      if (!recipe) {
+        return res.status(404).json({ message: "Recette non trouvée" });
+      }
+      
+      res.json(recipe);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.get(`${apiPrefix}/recipes/by-product/:productId`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const productId = parseInt(req.params.productId);
+      if (isNaN(productId)) {
+        return res.status(400).json({ message: "ID de produit invalide" });
+      }
+      
+      const recipe = await storage.getRecipeByProduct(productId);
+      if (!recipe) {
+        return res.status(404).json({ message: "Aucune recette trouvée pour ce produit" });
+      }
+      
+      res.json(recipe);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  app.post(`${apiPrefix}/recipes`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const { recipe, ingredients } = req.body;
+      if (!recipe || !ingredients || !Array.isArray(ingredients)) {
+        return res.status(400).json({ message: "Données de recette invalides" });
+      }
+      
+      const recipeData = insertRecipeSchema.parse(recipe);
+      const newRecipe = await storage.createRecipe(recipeData, ingredients);
+      
+      res.status(201).json(newRecipe);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.patch(`${apiPrefix}/recipes/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de recette invalide" });
+      }
+      
+      const { recipe, ingredients } = req.body;
+      if (!recipe) {
+        return res.status(400).json({ message: "Données de recette manquantes" });
+      }
+      
+      const updatedRecipe = await storage.updateRecipe(id, recipe, ingredients);
+      if (!updatedRecipe) {
+        return res.status(404).json({ message: "Recette non trouvée" });
+      }
+      
+      res.json(updatedRecipe);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  app.delete(`${apiPrefix}/recipes/:id`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de recette invalide" });
+      }
+      
+      const result = await storage.deleteRecipe(id);
+      if (!result) {
+        return res.status(404).json({ message: "Recette non trouvée" });
+      }
+      
+      res.status(200).json({ message: "Recette supprimée avec succès" });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
+  // Utilisation d'une recette lors d'une vente
+  app.post(`${apiPrefix}/recipes/:id/use`, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "ID de recette invalide" });
+      }
+      
+      const { transactionId } = req.body;
+      if (!transactionId) {
+        return res.status(400).json({ message: "ID de transaction requis" });
+      }
+      
+      const userId = (req.user as any).id;
+      const movements = await storage.useRecipeForTransaction(id, userId, transactionId);
+      
+      res.json({ success: true, movements });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+  
   const httpServer = createServer(app);
   return httpServer;
 }
