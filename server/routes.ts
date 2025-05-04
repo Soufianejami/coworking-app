@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { 
   insertProductSchema, insertTransactionSchema, insertExpenseSchema, 
   insertInventorySchema, insertStockMovementSchema,
-  insertUserSchema, USER_ROLES, EXPENSE_CATEGORIES, STOCK_ACTION_TYPES
+  insertUserSchema, insertIngredientSchema, insertRecipeSchema,
+  USER_ROLES, EXPENSE_CATEGORIES, STOCK_ACTION_TYPES
 } from "@shared/schema";
 import { format, parseISO, subMonths, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { fr } from "date-fns/locale";

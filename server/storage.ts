@@ -1,10 +1,13 @@
 import { 
   InsertProduct, InsertTransaction, InsertDailyStats, InsertUser, InsertExpense,
-  InsertInventory, InsertStockMovement,
+  InsertInventory, InsertStockMovement, InsertIngredient, InsertIngredientMovement,
+  InsertRecipe, InsertRecipeIngredient,
   Product, Transaction, DailyStats, User, Expense,
-  Inventory, StockMovement,
+  Inventory, StockMovement, Ingredient, IngredientMovement,
+  Recipe, RecipeIngredient,
   TransactionType, PaymentMethod, ExpenseCategory, StockActionType,
-  products, transactions, dailyStats, users, expenses, inventory, stockMovements
+  products, transactions, dailyStats, users, expenses, inventory, stockMovements,
+  ingredients, ingredientMovements, recipes, recipeIngredients
 } from "@shared/schema";
 import { startOfDay, endOfDay, format, parseISO, addMonths } from "date-fns";
 import { db } from "./db";
