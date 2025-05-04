@@ -165,38 +165,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the transaction
       const newTransaction = await storage.createTransaction(transactionData);
       
-      // If this is a cafe transaction with items, update the stock for beverages
+      // If this is a cafe transaction with items, process stock or ingredients
       if (newTransaction.type === 'cafe' && newTransaction.items && Array.isArray(newTransaction.items)) {
         const userId = (req.user as any).id;
         
         // Check each item in the transaction
         for (const item of newTransaction.items) {
           try {
-            // Get the product to check if it's a beverage (not coffee)
+            // Get the product
             const product = await storage.getProduct(item.id);
-            
-            // Skip if product not found or it's not a beverage or it's a coffee product
-            if (!product || product.category !== 'beverage' || product.name.toLowerCase().includes('café')) {
+            if (!product) {
               continue;
             }
+
+            // First, check if there's a recipe for this product (coffee, espresso, etc.)
+            const recipe = await storage.getRecipeByProduct(item.id);
             
-            // Check if there's inventory for this product
-            const inventoryItem = await storage.getInventoryItemByProductId(item.id);
-            
-            // If inventory exists, reduce the stock
-            if (inventoryItem) {
+            if (recipe && recipe.ingredients && recipe.ingredients.length > 0) {
+              // If there's a recipe, use it to reduce ingredient stocks
               try {
-                await storage.removeStock(
-                  item.id, 
-                  item.quantity, 
-                  userId, 
-                  `Vente - Transaction #${newTransaction.id}`,
-                  newTransaction.id
-                );
-                console.log(`Updated stock for product ${item.id}, removed ${item.quantity} units`);
-              } catch (stockError: any) {
-                // Just log the error but don't fail the transaction
-                console.error(`Failed to update stock for product ${item.id}: ${stockError.message}`);
+                await storage.useRecipeForTransaction(recipe.id, userId, newTransaction.id);
+                console.log(`Used recipe for product ${item.id}, name: ${product.name}, quantity: ${item.quantity}`);
+              } catch (recipeError: any) {
+                // Log the error but don't fail the transaction
+                console.error(`Failed to use recipe for product ${item.id}: ${recipeError.message}`);
+              }
+            } 
+            // For non-recipe products, check if they're in inventory
+            else if (product.category === 'beverage' || product.category === 'other') {
+              // Check if there's inventory for this product
+              const inventoryItem = await storage.getInventoryItemByProductId(item.id);
+              
+              // If inventory exists, reduce the stock
+              if (inventoryItem) {
+                try {
+                  await storage.removeStock(
+                    item.id, 
+                    item.quantity, 
+                    userId, 
+                    `Vente - Transaction #${newTransaction.id}`,
+                    newTransaction.id
+                  );
+                  console.log(`Updated stock for product ${item.id}, removed ${item.quantity} units`);
+                } catch (stockError: any) {
+                  // Just log the error but don't fail the transaction
+                  console.error(`Failed to update stock for product ${item.id}: ${stockError.message}`);
+                }
               }
             }
           } catch (productError: any) {

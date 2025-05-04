@@ -1236,8 +1236,9 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Recettes
-  async getAllRecipes(): Promise<(Recipe & { product: Product })[]> {
-    return await db
+  async getAllRecipes(): Promise<(Recipe & { product: Product, ingredients: (RecipeIngredient & { ingredient: Ingredient })[] })[]> {
+    // Récupérer toutes les recettes avec leurs produits
+    const recipesResult = await db
       .select({
         id: recipes.id,
         productId: recipes.productId,
@@ -1250,6 +1251,32 @@ export class DatabaseStorage implements IStorage {
       .from(recipes)
       .innerJoin(products, eq(recipes.productId, products.id))
       .orderBy(asc(recipes.name));
+      
+    // Pour chaque recette, récupérer les ingrédients associés
+    const recipesWithIngredients = await Promise.all(
+      recipesResult.map(async (recipe) => {
+        const recipeIngredientsResult = await db
+          .select({
+            id: recipeIngredients.id,
+            recipeId: recipeIngredients.recipeId,
+            ingredientId: recipeIngredients.ingredientId,
+            quantity: recipeIngredients.quantity,
+            createdAt: recipeIngredients.createdAt,
+            updatedAt: recipeIngredients.updatedAt,
+            ingredient: ingredients
+          })
+          .from(recipeIngredients)
+          .innerJoin(ingredients, eq(recipeIngredients.ingredientId, ingredients.id))
+          .where(eq(recipeIngredients.recipeId, recipe.id));
+          
+        return {
+          ...recipe,
+          ingredients: recipeIngredientsResult
+        };
+      })
+    );
+    
+    return recipesWithIngredients;
   }
   
   async getRecipe(id: number): Promise<(Recipe & { product: Product, ingredients: (RecipeIngredient & { ingredient: Ingredient })[] }) | undefined> {
