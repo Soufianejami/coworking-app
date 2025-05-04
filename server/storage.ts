@@ -291,9 +291,10 @@ export class DatabaseStorage implements IStorage {
           // Créer une dépense correspondant à l'ajout de stock
           await this.createExpense({
             amount: invItem.purchasePrice * quantity, // Total du coût = prix unitaire × quantité ajoutée
-            category: "supplies",
+            // Utiliser la catégorie "other" qui est plus flexible
+            category: "other",
             date: new Date(),
-            description: `Achat de stock: ${product.name} (${quantity} unités)`,
+            description: `Produit: ${product.name} (${quantity} unités)`,
             paymentMethod: "cash"
             // createdById est optionnel, donc on ne le fournit pas
           });
