@@ -114,12 +114,12 @@ export type Transaction = typeof transactions.$inferSelect;
 export const dailyStats = pgTable("daily_stats", {
   id: serial("id").primaryKey(),
   date: timestamp("date").notNull(),
-  totalRevenue: integer("total_revenue").notNull().default(0),
-  entriesRevenue: integer("entries_revenue").notNull().default(0),
+  totalRevenue: doublePrecision("total_revenue").notNull().default(0),
+  entriesRevenue: doublePrecision("entries_revenue").notNull().default(0),
   entriesCount: integer("entries_count").notNull().default(0),
-  subscriptionsRevenue: integer("subscriptions_revenue").notNull().default(0),
+  subscriptionsRevenue: doublePrecision("subscriptions_revenue").notNull().default(0),
   subscriptionsCount: integer("subscriptions_count").notNull().default(0),
-  cafeRevenue: integer("cafe_revenue").notNull().default(0),
+  cafeRevenue: doublePrecision("cafe_revenue").notNull().default(0),
   cafeOrdersCount: integer("cafe_orders_count").notNull().default(0),
 }, (table) => {
   return {
@@ -142,7 +142,7 @@ export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
   date: timestamp("date").notNull().defaultNow(),
-  amount: integer("amount").notNull(), // Amount in DH
+  amount: doublePrecision("amount").notNull(), // Amount in DH
   category: text("category", { enum: EXPENSE_CATEGORIES }).notNull(),
   description: text("description"),
   paymentMethod: text("payment_method", { enum: PAYMENT_METHODS }).notNull(),
@@ -179,9 +179,9 @@ export type StockActionType = typeof STOCK_ACTION_TYPES[number];
 export const inventory = pgTable("inventory", {
   id: serial("id").primaryKey(),
   productId: integer("product_id").notNull().references(() => products.id),
-  quantity: integer("quantity").notNull().default(0),
-  minThreshold: integer("min_threshold").notNull().default(5), // Alert threshold
-  purchasePrice: integer("purchase_price"), // Purchase price in DH (dirhams)
+  quantity: doublePrecision("quantity").notNull().default(0),
+  minThreshold: doublePrecision("min_threshold").notNull().default(5), // Alert threshold
+  purchasePrice: doublePrecision("purchase_price"), // Purchase price in DH (dirhams)
   expirationDate: timestamp("expiration_date"), // Can be null for items without expiration
   lastRestockDate: timestamp("last_restock_date").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -229,7 +229,7 @@ export const stockMovements = pgTable("stock_movements", {
   id: serial("id").primaryKey(),
   inventoryId: integer("inventory_id").notNull().references(() => inventory.id),
   productId: integer("product_id").notNull().references(() => products.id),
-  quantity: integer("quantity").notNull(), // Can be negative for removal
+  quantity: doublePrecision("quantity").notNull(), // Can be negative for removal
   actionType: text("action_type", { enum: STOCK_ACTION_TYPES }).notNull().default("add"),
   reason: text("reason"), // Optional reason for the movement
   transactionId: integer("transaction_id").references(() => transactions.id), // If related to a sale
@@ -256,9 +256,9 @@ export const ingredients = pgTable("ingredients", {
   name: text("name").notNull(),
   description: text("description"),
   unit: text("unit").notNull(), // g, ml, pcs, etc.
-  purchasePrice: integer("purchase_price"), // Prix d'achat par unité
-  quantityInStock: integer("quantity_in_stock").notNull().default(0),
-  minThreshold: integer("min_threshold").notNull().default(5),
+  purchasePrice: doublePrecision("purchase_price"), // Prix d'achat par unité
+  quantityInStock: doublePrecision("quantity_in_stock").notNull().default(0),
+  minThreshold: doublePrecision("min_threshold").notNull().default(5),
   expirationDate: timestamp("expiration_date"),
   lastRestockDate: timestamp("last_restock_date").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -313,7 +313,7 @@ export const recipeIngredients = pgTable("recipe_ingredients", {
   id: serial("id").primaryKey(),
   recipeId: integer("recipe_id").notNull().references(() => recipes.id),
   ingredientId: integer("ingredient_id").notNull().references(() => ingredients.id),
-  quantity: integer("quantity").notNull(), // Quantité en unités de l'ingrédient
+  quantity: doublePrecision("quantity").notNull(), // Quantité en unités de l'ingrédient
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => {
@@ -335,7 +335,7 @@ export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 export const ingredientMovements = pgTable("ingredient_movements", {
   id: serial("id").primaryKey(),
   ingredientId: integer("ingredient_id").notNull().references(() => ingredients.id),
-  quantity: integer("quantity").notNull(), // Peut être négatif pour une utilisation
+  quantity: doublePrecision("quantity").notNull(), // Peut être négatif pour une utilisation
   actionType: text("action_type", { enum: STOCK_ACTION_TYPES }).notNull().default("add"),
   reason: text("reason"), // Raison optionnelle du mouvement
   transactionId: integer("transaction_id").references(() => transactions.id), // Si lié à une vente
