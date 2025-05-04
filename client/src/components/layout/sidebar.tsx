@@ -15,7 +15,9 @@ import {
   CakeSlice,
   ShoppingCart,
   PieChart,
-  TrendingUp
+  TrendingUp,
+  Utensils,
+  Coffee
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
@@ -117,6 +119,16 @@ export default function Sidebar() {
       name: "Gestion du Stock",
       href: "/stock",
       icon: CakeSlice,
+    },
+    {
+      name: "Ingrédients",
+      href: "/ingredients",
+      icon: Utensils,
+    },
+    {
+      name: "Recettes",
+      href: "/recipes",
+      icon: Coffee,
     },
     {
       name: "Utilisateurs",
