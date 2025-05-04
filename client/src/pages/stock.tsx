@@ -461,9 +461,9 @@ export default function StockPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Gestion des Stocks - Boissons</h1>
+          <h1 className="text-3xl font-bold">Produits en Stock</h1>
           <p className="text-gray-500">
-            Gérez les stocks des boissons et ajoutez-les au menu
+            Gérez l'inventaire des produits finis et emballés prêts à la vente (bouteilles, snacks, etc.)
           </p>
         </div>
         <div className="flex gap-2">
@@ -519,9 +519,9 @@ export default function StockPage() {
         <TabsContent value="inventory">
           <Card>
             <CardHeader>
-              <CardTitle>Stock de Boissons</CardTitle>
+              <CardTitle>Inventaire des Produits Emballés</CardTitle>
               <CardDescription>
-                Liste de tous les produits en stock avec leurs quantités.
+                Produits finis prêts à la vente (bouteilles, snacks, etc.) avec leurs quantités et prix d'achat.
               </CardDescription>
             </CardHeader>
             <CardContent>

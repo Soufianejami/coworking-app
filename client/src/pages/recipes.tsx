@@ -288,9 +288,9 @@ export default function RecipesPage() {
     <div className="container py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Recettes de Café</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Fiches Techniques</h1>
           <p className="text-muted-foreground">
-            Gérez les recettes pour vos différentes boissons et suivez l'utilisation des ingrédients.
+            Définissez les ingrédients et les quantités nécessaires pour préparer chaque boisson du menu.
           </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -302,9 +302,9 @@ export default function RecipesPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[700px]">
             <DialogHeader>
-              <DialogTitle>Créer une nouvelle recette</DialogTitle>
+              <DialogTitle>Créer une nouvelle fiche technique</DialogTitle>
               <DialogDescription>
-                Définissez les ingrédients et les quantités nécessaires pour préparer cette boisson.
+                Définissez les ingrédients et les quantités précises nécessaires pour préparer ce produit.
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -465,9 +465,9 @@ export default function RecipesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Liste des recettes</CardTitle>
+          <CardTitle>Liste des fiches techniques</CardTitle>
           <CardDescription>
-            Toutes les recettes définies pour les produits de café et autres boissons.
+            Toutes les fiches techniques qui définissent les quantités précises d'ingrédients pour chaque boisson.
           </CardDescription>
         </CardHeader>
         <CardContent>
