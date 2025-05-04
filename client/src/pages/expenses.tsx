@@ -530,7 +530,16 @@ export default function ExpensesPage() {
                       }
                       // Pour les achats d'ingrédients
                       else if (descText.startsWith("Achat d'ingrédient:")) {
-                        const match = descText.match(/Achat d'ingrédient: ([^\s]+)/);
+                        // Format: "Achat d'ingrédient: sucre (3 kg)"
+                        const match = descText.match(/Achat d'ingrédient: ([^\s(]+)/);
+                        if (match && match[1]) {
+                          name = match[1].trim();
+                        }
+                      }
+                      // Pour les achats de stock
+                      else if (descText.startsWith("Achat de stock:")) {
+                        // Format: "Achat de stock: hawai"
+                        const match = descText.match(/Achat de stock: (.+)/);
                         if (match && match[1]) {
                           name = match[1].trim();
                         }

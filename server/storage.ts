@@ -1031,6 +1031,9 @@ export class DatabaseStorage implements IStorage {
     // Si l'ingrédient a un prix d'achat, créer automatiquement une dépense
     if (ingredient.purchasePrice && ingredient.purchasePrice > 0) {
       try {
+        // Format uniforme pour la description de la dépense d'ingrédient
+        const description = `Achat d'ingrédient: ${ingredient.name} (${quantity} ${ingredient.unit})`;
+        
         // Vérifions d'abord si une dépense similaire n'a pas déjà été créée récemment
         // pour éviter les doublons (par exemple dans les 5 dernières minutes)
         const fiveMinutesAgo = new Date(new Date().getTime() - 5 * 60 * 1000);
@@ -1038,7 +1041,7 @@ export class DatabaseStorage implements IStorage {
           .from(expenses)
           .where(and(
             gte(expenses.date, fiveMinutesAgo),
-            eq(expenses.description, `Ingrédient: ${ingredient.name} (${quantity} ${ingredient.unit})`)
+            eq(expenses.description, description)
           ));
         
         // N'ajouter une dépense que si aucune dépense similaire n'a été trouvée
@@ -1048,7 +1051,7 @@ export class DatabaseStorage implements IStorage {
             // Utiliser la catégorie "supplies" de manière constante pour tous les ingrédients
             category: "supplies",
             date: new Date(),
-            description: `Ingrédient: ${ingredient.name} (${quantity} ${ingredient.unit})`,
+            description: description,
             paymentMethod: "cash"
           });
         } else {
