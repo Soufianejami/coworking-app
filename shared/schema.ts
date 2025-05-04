@@ -248,3 +248,111 @@ export const insertStockMovementSchema = createInsertSchema(stockMovements).omit
 
 export type InsertStockMovement = z.infer<typeof insertStockMovementSchema>;
 export type StockMovement = typeof stockMovements.$inferSelect;
+
+// Nouvelle section pour les recettes
+// Définit les ingrédients de base (café, lait, etc.)
+export const ingredients = pgTable("ingredients", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  unit: text("unit").notNull(), // g, ml, pcs, etc.
+  purchasePrice: integer("purchase_price"), // Prix d'achat par unité
+  quantityInStock: integer("quantity_in_stock").notNull().default(0),
+  minThreshold: integer("min_threshold").notNull().default(5),
+  expirationDate: timestamp("expiration_date"),
+  lastRestockDate: timestamp("last_restock_date").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertIngredientSchema = createInsertSchema(ingredients).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  purchasePrice: z.number().int().min(0).optional(),
+  expirationDate: z.union([
+    z.date(),
+    z.string().transform((str) => {
+      try {
+        return new Date(str);
+      } catch (error) {
+        console.error("Error parsing expiration date:", str, error);
+        const date = new Date();
+        date.setMonth(date.getMonth() + 6);
+        return date;
+      }
+    })
+  ]).optional().nullable(),
+});
+
+export type InsertIngredient = z.infer<typeof insertIngredientSchema>;
+export type Ingredient = typeof ingredients.$inferSelect;
+
+// Définit les recettes pour les produits
+export const recipes = pgTable("recipes", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").notNull().references(() => products.id),
+  name: text("name").notNull(),
+  description: text("description"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertRecipeSchema = createInsertSchema(recipes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertRecipe = z.infer<typeof insertRecipeSchema>;
+export type Recipe = typeof recipes.$inferSelect;
+
+// Définit les ingrédients utilisés dans chaque recette et leurs quantités
+export const recipeIngredients = pgTable("recipe_ingredients", {
+  id: serial("id").primaryKey(),
+  recipeId: integer("recipe_id").notNull().references(() => recipes.id),
+  ingredientId: integer("ingredient_id").notNull().references(() => ingredients.id),
+  quantity: integer("quantity").notNull(), // Quantité en unités de l'ingrédient
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    recipeIngredientUnique: unique().on(table.recipeId, table.ingredientId),
+  }
+});
+
+export const insertRecipeIngredientSchema = createInsertSchema(recipeIngredients).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertRecipeIngredient = z.infer<typeof insertRecipeIngredientSchema>;
+export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
+
+// Suivi des mouvements d'ingrédients
+export const ingredientMovements = pgTable("ingredient_movements", {
+  id: serial("id").primaryKey(),
+  ingredientId: integer("ingredient_id").notNull().references(() => ingredients.id),
+  quantity: integer("quantity").notNull(), // Peut être négatif pour une utilisation
+  actionType: text("action_type", { enum: STOCK_ACTION_TYPES }).notNull().default("add"),
+  reason: text("reason"), // Raison optionnelle du mouvement
+  transactionId: integer("transaction_id").references(() => transactions.id), // Si lié à une vente
+  recipeId: integer("recipe_id").references(() => recipes.id), // Si lié à la préparation d'une recette
+  performedById: integer("performed_by_id").notNull().references(() => users.id),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+});
+
+export const insertIngredientMovementSchema = createInsertSchema(ingredientMovements).omit({
+  id: true,
+  timestamp: true,
+}).extend({
+  actionType: z.enum(STOCK_ACTION_TYPES),
+  reason: z.string().optional(),
+  transactionId: z.number().optional(),
+  recipeId: z.number().optional(),
+});
+
+export type InsertIngredientMovement = z.infer<typeof insertIngredientMovementSchema>;
+export type IngredientMovement = typeof ingredientMovements.$inferSelect;
