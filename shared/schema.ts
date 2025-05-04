@@ -193,7 +193,7 @@ export const insertInventorySchema = createInsertSchema(inventory).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  purchasePrice: z.number().int().min(0).optional(),
+  purchasePrice: z.number().min(0).optional(),
   expirationDate: z.union([
     z.date(),
     z.string().transform((str) => {
@@ -270,7 +270,7 @@ export const insertIngredientSchema = createInsertSchema(ingredients).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  purchasePrice: z.number().int().min(0).optional(),
+  purchasePrice: z.number().min(0).optional(),
   expirationDate: z.union([
     z.date(),
     z.string().transform((str) => {
