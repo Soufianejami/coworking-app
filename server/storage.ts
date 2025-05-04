@@ -155,22 +155,38 @@ export class DatabaseStorage implements IStorage {
       updatedAt: new Date() // Ensure updatedAt is set
     }).returning();
     
-    // Si un prix d'achat est défini, créer automatiquement une dépense
-    if (item.purchasePrice && item.purchasePrice > 0) {
+    // Si un prix d'achat est défini ET que la quantité est supérieure à 0, créer automatiquement une dépense
+    if (item.purchasePrice && item.purchasePrice > 0 && item.quantity && item.quantity > 0) {
       try {
         // Récupérer le nom du produit
         const [product] = await db.select().from(products).where(eq(products.id, item.productId));
         
         if (product) {
-          // Créer une dépense correspondant à l'achat du stock
-          await this.createExpense({
-            amount: item.purchasePrice * (item.quantity || 1), // Total du coût = prix unitaire × quantité
-            category: "supplies",
-            date: new Date(),
-            description: `Achat de stock: ${product.name}`,
-            paymentMethod: "cash"
-            // createdById est optionnel, donc on ne le fournit pas
-          });
+          const description = `Achat de stock: ${product.name}`;
+          
+          // Vérifier si une dépense similaire existe déjà (dans les 5 dernières minutes)
+          const fiveMinutesAgo = new Date(new Date().getTime() - 5 * 60 * 1000);
+          const existingExpenses = await db.select()
+            .from(expenses)
+            .where(and(
+              gte(expenses.date, fiveMinutesAgo),
+              eq(expenses.description, description)
+            ));
+          
+          // N'ajouter une dépense que si aucune dépense similaire n'a été trouvée
+          if (existingExpenses.length === 0) {
+            // Créer une dépense correspondant à l'achat du stock
+            await this.createExpense({
+              amount: item.purchasePrice * item.quantity, // Total du coût = prix unitaire × quantité
+              category: "supplies",
+              date: new Date(),
+              description: description,
+              paymentMethod: "cash"
+              // createdById est optionnel, donc on ne le fournit pas
+            });
+          } else {
+            console.log("Dépense similaire déjà existante pour le stock, évitement du doublon");
+          }
         }
       } catch (error) {
         console.error("Erreur lors de la création de la dépense pour le stock:", error);
