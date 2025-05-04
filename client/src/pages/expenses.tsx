@@ -201,9 +201,13 @@ export default function ExpensesPage() {
   // Update expense mutation
   const updateExpenseMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof expenseFormSchema> }) => {
+      // Assurons-nous que la date est formatée correctement
       const expenseData = {
         ...data,
-        date: new Date(data.date),
+        // Formatage explicite de la date en ISO string
+        date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+        // Assurons-nous que le montant est bien un nombre
+        amount: Number(data.amount)
       };
       const res = await apiRequest("PATCH", `/api/expenses/${id}`, expenseData);
       if (!res.ok) {

@@ -1001,9 +1001,10 @@ export class DatabaseStorage implements IStorage {
       try {
         await this.createExpense({
           amount: ingredient.purchasePrice * quantity,
-          category: "supplies",
+          // Utiliser la catégorie "other" pour les ingrédients, qui est plus flexible
+          category: "other",
           date: new Date(),
-          description: `Réapprovisionnement: ${ingredient.name}`,
+          description: `Ingrédient: ${ingredient.name} (${quantity} ${ingredient.unit})`,
           paymentMethod: "cash"
         });
       } catch (error) {
