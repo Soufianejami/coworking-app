@@ -659,7 +659,7 @@ export default function IngredientsPage() {
                     <FormItem>
                       <FormLabel>Qté en stock</FormLabel>
                       <FormControl>
-                        <Input type="number" min="0" {...field} />
+                        <Input type="number" min="0" step="0.01" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -672,7 +672,7 @@ export default function IngredientsPage() {
                     <FormItem>
                       <FormLabel>Seuil min.</FormLabel>
                       <FormControl>
-                        <Input type="number" min="0" {...field} />
+                        <Input type="number" min="0" step="0.01" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -714,7 +714,7 @@ export default function IngredientsPage() {
                   <FormItem>
                     <FormLabel>Quantité à ajouter ({currentIngredient?.unit})</FormLabel>
                     <FormControl>
-                      <Input type="number" min="1" {...field} />
+                      <Input type="number" min="0.01" step="0.01" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -770,7 +770,8 @@ export default function IngredientsPage() {
                     <FormControl>
                       <Input
                         type="number"
-                        min="1"
+                        min="0.01"
+                        step="0.01"
                         max={currentIngredient?.quantityInStock}
                         {...field}
                       />
