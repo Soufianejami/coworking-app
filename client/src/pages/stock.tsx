@@ -345,7 +345,7 @@ export default function StockPage() {
     e.preventDefault();
     addStockMutation.mutate({
       productId: parseInt(addStockForm.productId),
-      quantity: parseInt(addStockForm.quantity),
+      quantity: parseFloat(addStockForm.quantity),
       reason: addStockForm.reason,
     });
   };
@@ -354,7 +354,7 @@ export default function StockPage() {
     e.preventDefault();
     removeStockMutation.mutate({
       productId: parseInt(removeStockForm.productId),
-      quantity: parseInt(removeStockForm.quantity),
+      quantity: parseFloat(removeStockForm.quantity),
       reason: removeStockForm.reason,
     });
   };
@@ -363,7 +363,7 @@ export default function StockPage() {
     e.preventDefault();
     adjustStockMutation.mutate({
       productId: parseInt(adjustStockForm.productId),
-      newQuantity: parseInt(adjustStockForm.newQuantity),
+      newQuantity: parseFloat(adjustStockForm.newQuantity),
       reason: adjustStockForm.reason,
     });
   };
@@ -378,7 +378,7 @@ export default function StockPage() {
       // Une fois le produit créé, on crée l'inventaire
       createInventoryMutation.mutate({
         productId: newProduct.id,
-        minThreshold: parseInt(inventoryForm.minThreshold),
+        minThreshold: parseFloat(inventoryForm.minThreshold),
         ...(inventoryForm.purchasePrice ? { purchasePrice: parseFloat(inventoryForm.purchasePrice) } : {}),
         ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : {}),
       });
@@ -407,7 +407,7 @@ export default function StockPage() {
       // Produit existant, créer directement l'inventaire
       createInventoryMutation.mutate({
         productId: parseInt(inventoryForm.productId),
-        minThreshold: parseInt(inventoryForm.minThreshold),
+        minThreshold: parseFloat(inventoryForm.minThreshold),
         ...(inventoryForm.purchasePrice ? { purchasePrice: parseFloat(inventoryForm.purchasePrice) } : {}),
         ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : {}),
       });
@@ -420,7 +420,7 @@ export default function StockPage() {
 
     const formData = {
       id: selectedItem.id,
-      minThreshold: parseInt(inventoryForm.minThreshold),
+      minThreshold: parseFloat(inventoryForm.minThreshold),
       ...(inventoryForm.purchasePrice ? { purchasePrice: parseFloat(inventoryForm.purchasePrice) } : {}),
       ...(inventoryForm.expirationDate ? { expirationDate: inventoryForm.expirationDate } : { expirationDate: null }),
     };
