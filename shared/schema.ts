@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, boolean, json, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, boolean, json, unique, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -32,7 +32,7 @@ export type User = typeof users.$inferSelect;
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  price: integer("price").notNull(), // Price in DH (dirhams)
+  price: doublePrecision("price").notNull(), // Price in DH (dirhams)
   category: text("category").notNull(), // "beverage", "food", etc.
   isActive: boolean("is_active").notNull().default(true),
 });
@@ -60,7 +60,7 @@ export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   date: timestamp("date").notNull().defaultNow(),
   type: text("type").notNull(), // "entry", "subscription", "cafe"
-  amount: integer("amount").notNull(), // Total amount in DH
+  amount: doublePrecision("amount").notNull(), // Total amount in DH
   paymentMethod: text("payment_method").notNull(), // "cash", "card", "mobile_transfer"
   clientName: text("client_name"), // Optional for entries and café
   notes: text("notes"), // Optional notes
