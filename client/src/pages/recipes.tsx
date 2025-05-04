@@ -122,8 +122,8 @@ export default function RecipesPage() {
     refetchOnWindowFocus: false
   });
 
-  // Filtrer les produits pour n'afficher que les cafés/boissons
-  const cafeProducts = products?.filter(p => p.category === 'beverage') || [];
+  // Filtrer les produits pour n'afficher que les cafés/boissons du menu
+  const cafeProducts = products?.filter(p => p.category === 'beverage' && p.isActive) || [];
 
   // Configuration du formulaire
   const form = useForm<RecipeFormValues>({
