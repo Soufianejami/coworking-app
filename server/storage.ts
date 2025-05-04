@@ -1357,7 +1357,8 @@ export class DatabaseStorage implements IStorage {
       });
     }
     
-    return newRecipe;
+    // Retourner la recette complète avec les informations du produit et les ingrédients
+    return await this.getRecipe(newRecipe.id) as Recipe;
   }
   
   async updateRecipe(id: number, recipe: Partial<Recipe>, ingredients?: { ingredientId: number, quantity: number }[]): Promise<Recipe | undefined> {
@@ -1392,7 +1393,8 @@ export class DatabaseStorage implements IStorage {
       }
     }
     
-    return result[0];
+    // Retourner la recette complète avec les informations du produit et les ingrédients
+    return await this.getRecipe(id) as Recipe;
   }
   
   async deleteRecipe(id: number): Promise<boolean> {
