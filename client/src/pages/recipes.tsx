@@ -112,6 +112,17 @@ export default function RecipesPage() {
     refetchOnWindowFocus: false
   });
 
+  // Log pour vérifier les données de recettes
+  useEffect(() => {
+    if (recipes) {
+      console.log("Recettes reçues:", recipes);
+      if (recipes.length > 0) {
+        console.log("Première recette:", recipes[0]);
+        console.log("Ingrédients de la première recette:", recipes[0].ingredients);
+      }
+    }
+  }, [recipes]);
+
   const { data: products, isLoading: isLoadingProducts } = useQuery<Product[]>({
     queryKey: ['/api/products'],
     refetchOnWindowFocus: false
@@ -166,10 +177,14 @@ export default function RecipesPage() {
         }))
       };
 
+      console.log("Envoi de la recette:", payload);
       const res = await apiRequest('POST', '/api/recipes', payload);
-      return await res.json();
+      const result = await res.json();
+      console.log("Réponse de création de recette:", result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Recette créée avec succès:", data);
       queryClient.invalidateQueries({ queryKey: ['/api/recipes'] });
       toast({
         title: 'Recette ajoutée',
@@ -179,6 +194,7 @@ export default function RecipesPage() {
       form.reset();
     },
     onError: (error: any) => {
+      console.error("Erreur d'ajout de recette:", error);
       toast({
         title: 'Erreur',
         description: `Erreur lors de l'ajout de la recette: ${error.message}`,
@@ -202,10 +218,14 @@ export default function RecipesPage() {
         }))
       };
 
+      console.log("Envoi de la mise à jour de recette:", payload);
       const res = await apiRequest('PATCH', `/api/recipes/${id}`, payload);
-      return await res.json();
+      const result = await res.json();
+      console.log("Réponse de mise à jour de recette:", result);
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("Recette mise à jour avec succès:", data);
       queryClient.invalidateQueries({ queryKey: ['/api/recipes'] });
       toast({
         title: 'Recette mise à jour',
@@ -215,6 +235,7 @@ export default function RecipesPage() {
       setCurrentRecipe(null);
     },
     onError: (error: any) => {
+      console.error("Erreur de mise à jour de recette:", error);
       toast({
         title: 'Erreur',
         description: `Erreur lors de la mise à jour de la recette: ${error.message}`,
