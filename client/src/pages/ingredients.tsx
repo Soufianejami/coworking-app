@@ -64,7 +64,7 @@ type IngredientFormValues = z.infer<typeof ingredientSchema>;
 
 // Schéma de validation pour l'ajustement du stock
 const stockAdjustmentSchema = z.object({
-  quantity: z.coerce.number().min(1, { message: 'La quantité doit être positive' }),
+  quantity: z.coerce.number().min(0.01, { message: 'La quantité doit être positive' }),
   reason: z.string().optional()
 });
 
@@ -293,7 +293,7 @@ export default function IngredientsPage() {
   const openAddStockDialog = (ingredient: Ingredient) => {
     setCurrentIngredient(ingredient);
     stockForm.reset({
-      quantity: 1,
+      quantity: 0.1,
       reason: `Réapprovisionnement de ${ingredient.name}`
     });
     setIsAddStockDialogOpen(true);
@@ -303,7 +303,7 @@ export default function IngredientsPage() {
   const openRemoveStockDialog = (ingredient: Ingredient) => {
     setCurrentIngredient(ingredient);
     stockForm.reset({
-      quantity: 1,
+      quantity: 0.1,
       reason: `Utilisation manuelle de ${ingredient.name}`
     });
     setIsRemoveStockDialogOpen(true);
@@ -714,7 +714,13 @@ export default function IngredientsPage() {
                   <FormItem>
                     <FormLabel>Quantité à ajouter ({currentIngredient?.unit})</FormLabel>
                     <FormControl>
-                      <Input type="number" min="0.01" step="0.01" {...field} />
+                      <Input 
+                        type="number" 
+                        min="0.01" 
+                        step="0.01" 
+                        {...field} 
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0.01)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -774,6 +780,7 @@ export default function IngredientsPage() {
                         step="0.01"
                         max={currentIngredient?.quantityInStock}
                         {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0.01)}
                       />
                     </FormControl>
                     <FormDescription>
