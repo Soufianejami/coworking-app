@@ -320,8 +320,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Endpoint pour fermer une journée manuellement
-  app.post(`${apiPrefix}/close-day`, async (req: Request, res: Response) => {
+  // Endpoint pour fermer une journée manuellement (admin seulement)
+  app.post(`${apiPrefix}/close-day`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
       // Obtenir la date actuelle du système
       const currentDate = new Date();
