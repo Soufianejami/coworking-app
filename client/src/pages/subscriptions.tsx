@@ -47,9 +47,16 @@ export default function Subscriptions() {
     queryKey: [`/api/transactions/byType/subscription`],
   });
   
-  // Calculate totals
-  const totalSubscriptions = subscriptions?.length || 0;
-  const totalRevenue = subscriptions?.reduce((sum, sub) => sum + sub.amount, 0) || 0;
+  // Calculate totals and filter active subscriptions
+  const activeSubscriptions = subscriptions?.filter(sub => {
+    const endDate = sub.subscriptionEndDate 
+      ? new Date(sub.subscriptionEndDate)
+      : addMonths(new Date(sub.date), 1);
+    return endDate > new Date(); // Only count active subscriptions
+  }) || [];
+  
+  const totalSubscriptions = activeSubscriptions.length;
+  const totalRevenue = activeSubscriptions.reduce((sum, sub) => sum + sub.amount, 0) || 0;
   
   // Create new subscription
   const createSubscription = useMutation({
@@ -314,24 +321,24 @@ export default function Subscriptions() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-medium text-gray-700">
-              Total des abonnements ce mois
+              Total des abonnements actifs
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totalSubscriptions}</div>
-            <p className="text-sm text-gray-500 mt-1">abonnements enregistrés</p>
+            <p className="text-sm text-gray-500 mt-1">abonnements actifs</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-medium text-gray-700">
-              Revenu total
+              Revenu des abonnements actifs
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{totalRevenue} DH</div>
-            <p className="text-sm text-gray-500 mt-1">des abonnements</p>
+            <p className="text-sm text-gray-500 mt-1">des abonnements en cours</p>
           </CardContent>
         </Card>
       </div>

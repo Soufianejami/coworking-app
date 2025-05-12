@@ -358,10 +358,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cafeOrdersCount
       });
       
+      // Calculer la date du prochain jour (pour indiquer le changement de journée)
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
       // Renvoyer les statistiques de la journée fermée
       res.json({
         message: "Journée fermée avec succès",
         date: today,
+        nextDay: tomorrow,
         stats
       });
     } catch (error: any) {
