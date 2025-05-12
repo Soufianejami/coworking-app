@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, parseISO } from "date-fns";
+import { fr } from "date-fns/locale";
 import { useAuth } from "@/hooks/use-auth";
-
+import { CalendarIcon, Edit, MoreVertical, Trash } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
@@ -13,8 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Edit, MoreVertical, Trash } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 export default function DailyEntries() {
@@ -39,10 +40,30 @@ export default function DailyEntries() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<any>(null);
   
-  // Fetch today's entries
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  // State for date selection
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  
+  // Format selected date for display and querying
+  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+  
+  // Calculate date range for filtering
+  const startDate = startOfDay(selectedDate);
+  const endDate = endOfDay(selectedDate);
+  
+  // Fetch entries for selected date
   const { data: entries, isLoading } = useQuery({
-    queryKey: [`/api/transactions/byType/entry`],
+    queryKey: [`/api/transactions/byType/entry`, selectedDateStr],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/transactions/byType/entry`);
+      const allEntries = await response.json();
+      
+      // Filter entries for the selected date (client-side filtering)
+      return allEntries.filter((entry: any) => {
+        const entryDate = new Date(entry.date);
+        return entryDate >= startDate && entryDate <= endDate;
+      });
+    }
   });
   
   // Calculate totals
@@ -62,8 +83,8 @@ export default function DailyEntries() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/entry`] });
-      queryClient.invalidateQueries({ queryKey: [`/api/stats/daily?date=${todayStr}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/entry`, selectedDateStr] });
+      queryClient.invalidateQueries({ queryKey: [`/api/stats/daily?date=${selectedDateStr}`] });
       toast({
         title: "Entrée ajoutée",
         description: "L'entrée journalière a été enregistrée avec succès."
