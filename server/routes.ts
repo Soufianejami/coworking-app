@@ -320,6 +320,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Endpoint pour fermer une journée manuellement
+  app.post(`${apiPrefix}/close-day`, async (req: Request, res: Response) => {
+    try {
+      // Obtenir la date actuelle du système
+      const currentDate = new Date();
+      const today = startOfDay(currentDate);
+      
+      // Récupérer toutes les transactions de la journée
+      const transactions = await storage.getTransactionsByDateRange(today, endOfDay(today));
+      
+      // Calculer les statistiques de la journée
+      const entriesTransactions = transactions.filter(t => t.type === 'entry');
+      const subscriptionsTransactions = transactions.filter(t => t.type === 'subscription');
+      const cafeTransactions = transactions.filter(t => t.type === 'cafe');
+      
+      const entriesRevenue = entriesTransactions.reduce((sum, t) => sum + t.amount, 0);
+      const entriesCount = entriesTransactions.length;
+      
+      const subscriptionsRevenue = subscriptionsTransactions.reduce((sum, t) => sum + t.amount, 0);
+      const subscriptionsCount = subscriptionsTransactions.length;
+      
+      const cafeRevenue = cafeTransactions.reduce((sum, t) => sum + t.amount, 0);
+      const cafeOrdersCount = cafeTransactions.length;
+      
+      const totalRevenue = entriesRevenue + subscriptionsRevenue + cafeRevenue;
+      
+      // Enregistrer ou mettre à jour les statistiques pour la journée actuelle
+      const stats = await storage.upsertDailyStats({
+        date: today,
+        totalRevenue,
+        entriesRevenue,
+        entriesCount,
+        subscriptionsRevenue,
+        subscriptionsCount,
+        cafeRevenue,
+        cafeOrdersCount
+      });
+      
+      // Renvoyer les statistiques de la journée fermée
+      res.json({
+        message: "Journée fermée avec succès",
+        date: today,
+        stats
+      });
+    } catch (error: any) {
+      console.error("Erreur lors de la fermeture de la journée:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
   // Endpoint pour calculer le bénéfice net total dans un intervalle
   app.get(`${apiPrefix}/stats/net-profit`, requireAdminOrSuperAdmin, async (req: Request, res: Response) => {
     try {
