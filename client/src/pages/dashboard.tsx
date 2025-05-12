@@ -48,15 +48,19 @@ export default function Dashboard() {
       return await response.json();
     },
     onSuccess: (data) => {
+      // Invalidate all relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: [`/api/stats/daily`] });
       queryClient.invalidateQueries({ queryKey: [`/api/stats/range`] });
       queryClient.invalidateQueries({ queryKey: [`/api/transactions`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/entry`] });
       
+      // Notify user of successful day closure
       toast({
         title: "Journée clôturée avec succès",
-        description: `Les statistiques du ${formatDate(today, 'd MMMM yyyy')} ont été enregistrées.`,
+        description: `Les statistiques du ${formatDate(today, 'd MMMM yyyy')} ont été enregistrées. La journée suivante est maintenant active.`,
       });
       
+      // Close the dialog
       setShowCloseDialog(false);
     },
     onError: (error: any) => {
@@ -145,7 +149,7 @@ export default function Dashboard() {
       {/* Recent Transactions */}
       <div className="mt-4 sm:mt-6">
         <RecentTransactions 
-          transactions={recentTransactions || []} 
+          transactions={Array.isArray(recentTransactions) ? recentTransactions : []} 
           isLoading={transactionsLoading} 
         />
       </div>

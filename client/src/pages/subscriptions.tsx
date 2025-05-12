@@ -48,15 +48,17 @@ export default function Subscriptions() {
   });
   
   // Calculate totals and filter active subscriptions
-  const activeSubscriptions = subscriptions?.filter(sub => {
+  const allSubscriptions = Array.isArray(subscriptions) ? subscriptions : [];
+  
+  const activeSubscriptions = allSubscriptions.filter(sub => {
     const endDate = sub.subscriptionEndDate 
       ? new Date(sub.subscriptionEndDate)
       : addMonths(new Date(sub.date), 1);
     return endDate > new Date(); // Only count active subscriptions
-  }) || [];
+  });
   
   const totalSubscriptions = activeSubscriptions.length;
-  const totalRevenue = activeSubscriptions.reduce((sum, sub) => sum + sub.amount, 0) || 0;
+  const totalRevenue = activeSubscriptions.reduce((sum: number, sub: any) => sum + sub.amount, 0);
   
   // Create new subscription
   const createSubscription = useMutation({
@@ -369,14 +371,14 @@ export default function Subscriptions() {
                     Chargement des abonnements...
                   </TableCell>
                 </TableRow>
-              ) : subscriptions?.length === 0 ? (
+              ) : allSubscriptions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isSuperAdmin ? 8 : 7} className="text-center py-4">
                     Aucun abonnement enregistré.
                   </TableCell>
                 </TableRow>
               ) : (
-                subscriptions?.map((subscription) => {
+                allSubscriptions.map((subscription: any) => {
                   const startDate = new Date(subscription.date);
                   const endDate = subscription.subscriptionEndDate 
                     ? new Date(subscription.subscriptionEndDate)
