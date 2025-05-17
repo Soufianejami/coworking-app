@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import SummaryCards from "@/components/dashboard/summary-cards";
+import SummaryCardsWithRentals from "@/components/dashboard/summary-cards-with-rentals";
 import TransactionForm from "@/components/dashboard/transaction-form";
 import RevenueCalendar from "@/components/dashboard/revenue-calendar";
 import RecentTransactions from "@/components/dashboard/recent-transactions";
@@ -189,7 +189,7 @@ export default function Dashboard() {
       
       {/* Revenue Summary Cards */}
       <div className={dayClosed ? "opacity-50 pointer-events-none" : ""}>
-        <SummaryCards dailyStats={dailyStats} isLoading={statsLoading} />
+        <SummaryCardsWithRentals dailyStats={dailyStats} isLoading={statsLoading} />
       </div>
       
       {/* Transaction Form Section */}
@@ -209,7 +209,7 @@ export default function Dashboard() {
       </div>
       
       {/* Locations de salles */}
-      <div className={`mt-6 mb-6 ${dayClosed ? "opacity-50 pointer-events-none" : ""}`}>
+      <div id="room-rentals-section" className={`mt-6 mb-6 ${dayClosed ? "opacity-50 pointer-events-none" : ""}`}>
         <h3 className="text-xl font-semibold mb-4">Locations de Salles</h3>
         <RoomRentalsHistory onEdit={handleEditRoomRental} />
       </div>
