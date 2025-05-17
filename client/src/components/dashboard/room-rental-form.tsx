@@ -114,24 +114,61 @@ export default function RoomRentalForm({ open, onOpenChange }: RoomRentalFormPro
   });
 
   // Gérer la soumission du formulaire
-  const onSubmit = (data: RoomRentalFormData) => {
-    // Vérification pour s'assurer que toutes les dates sont valides
-    if (!selectedDate || !startTime || !endTime) {
+  const onSubmit = async (data: RoomRentalFormData) => {
+    try {
+      // Vérification pour s'assurer que toutes les dates sont valides
+      if (!selectedDate || !startTime || !endTime) {
+        toast({
+          title: "Erreur de validation",
+          description: "Veuillez sélectionner toutes les dates et heures.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Création du payload avec les dates assurées comme définies
+      const payload = {
+        ...data,
+        date: selectedDate as Date,
+        startTime: startTime as Date,
+        endTime: endTime as Date,
+      };
+      
+      // Appel direct de l'API
+      const response = await fetch("/api/room-rentals", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erreur lors de la création de la location");
+      }
+      
+      // Traitement de la réponse
+      const newRental = await response.json();
+      
+      // Rafraîchir les données et afficher un message de succès
+      queryClient.invalidateQueries({ queryKey: ["/api/room-rentals"] });
+      
       toast({
-        title: "Erreur de validation",
-        description: "Veuillez sélectionner toutes les dates et heures.",
+        title: "Location ajoutée",
+        description: "La location a été enregistrée avec succès.",
+      });
+      
+      // Réinitialiser et fermer le formulaire
+      reset();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue",
         variant: "destructive",
       });
-      return;
     }
-    
-    const payload = {
-      ...data,
-      date: selectedDate,
-      startTime: startTime,
-      endTime: endTime,
-    };
-    createRentalMutation.mutate(payload);
   };
 
   // Formatage de l'heure pour l'affichage
@@ -253,34 +290,81 @@ export default function RoomRentalForm({ open, onOpenChange }: RoomRentalFormPro
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-4" align="start">
-                  <div className="grid gap-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        max="23"
-                        placeholder="Heure"
-                        value={startTime ? startTime.getHours() : ""}
-                        onChange={(e) => {
-                          const newTime = new Date(startTime || new Date());
-                          newTime.setHours(parseInt(e.target.value) || 0);
-                          setStartTime(newTime);
-                          setValue("startTime", newTime);
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        min="0"
-                        max="59"
-                        placeholder="Min"
-                        value={startTime ? startTime.getMinutes() : ""}
-                        onChange={(e) => {
-                          const newTime = new Date(startTime || new Date());
-                          newTime.setMinutes(parseInt(e.target.value) || 0);
-                          setStartTime(newTime);
-                          setValue("startTime", newTime);
-                        }}
-                      />
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Heure</Label>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const newTime = new Date(startTime || new Date());
+                              const currentHour = newTime.getHours();
+                              newTime.setHours(currentHour === 0 ? 23 : currentHour - 1);
+                              setStartTime(newTime);
+                              setValue("startTime", newTime);
+                            }}
+                          >
+                            -
+                          </Button>
+                          <span className="w-10 text-center">
+                            {startTime ? startTime.getHours().toString().padStart(2, '0') : "00"}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const newTime = new Date(startTime || new Date());
+                              const currentHour = newTime.getHours();
+                              newTime.setHours((currentHour + 1) % 24);
+                              setStartTime(newTime);
+                              setValue("startTime", newTime);
+                            }}
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <Label>Minutes</Label>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const newTime = new Date(startTime || new Date());
+                              const currentMinute = newTime.getMinutes();
+                              newTime.setMinutes(currentMinute === 0 ? 55 : Math.max(0, currentMinute - 5));
+                              setStartTime(newTime);
+                              setValue("startTime", newTime);
+                            }}
+                          >
+                            -
+                          </Button>
+                          <span className="w-10 text-center">
+                            {startTime ? startTime.getMinutes().toString().padStart(2, '0') : "00"}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const newTime = new Date(startTime || new Date());
+                              const currentMinute = newTime.getMinutes();
+                              newTime.setMinutes((currentMinute + 5) % 60);
+                              setStartTime(newTime);
+                              setValue("startTime", newTime);
+                            }}
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </PopoverContent>
@@ -303,34 +387,81 @@ export default function RoomRentalForm({ open, onOpenChange }: RoomRentalFormPro
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-4" align="start">
-                  <div className="grid gap-2">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        max="23"
-                        placeholder="Heure"
-                        value={endTime ? endTime.getHours() : ""}
-                        onChange={(e) => {
-                          const newTime = new Date(endTime || new Date());
-                          newTime.setHours(parseInt(e.target.value) || 0);
-                          setEndTime(newTime);
-                          setValue("endTime", newTime);
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        min="0"
-                        max="59"
-                        placeholder="Min"
-                        value={endTime ? endTime.getMinutes() : ""}
-                        onChange={(e) => {
-                          const newTime = new Date(endTime || new Date());
-                          newTime.setMinutes(parseInt(e.target.value) || 0);
-                          setEndTime(newTime);
-                          setValue("endTime", newTime);
-                        }}
-                      />
+                  <div className="grid gap-4">
+                    <div className="grid gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Heure</Label>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const newTime = new Date(endTime || new Date());
+                              const currentHour = newTime.getHours();
+                              newTime.setHours(currentHour === 0 ? 23 : currentHour - 1);
+                              setEndTime(newTime);
+                              setValue("endTime", newTime);
+                            }}
+                          >
+                            -
+                          </Button>
+                          <span className="w-10 text-center">
+                            {endTime ? endTime.getHours().toString().padStart(2, '0') : "00"}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const newTime = new Date(endTime || new Date());
+                              const currentHour = newTime.getHours();
+                              newTime.setHours((currentHour + 1) % 24);
+                              setEndTime(newTime);
+                              setValue("endTime", newTime);
+                            }}
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <Label>Minutes</Label>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const newTime = new Date(endTime || new Date());
+                              const currentMinute = newTime.getMinutes();
+                              newTime.setMinutes(currentMinute === 0 ? 55 : Math.max(0, currentMinute - 5));
+                              setEndTime(newTime);
+                              setValue("endTime", newTime);
+                            }}
+                          >
+                            -
+                          </Button>
+                          <span className="w-10 text-center">
+                            {endTime ? endTime.getMinutes().toString().padStart(2, '0') : "00"}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => {
+                              const newTime = new Date(endTime || new Date());
+                              const currentMinute = newTime.getMinutes();
+                              newTime.setMinutes((currentMinute + 5) % 60);
+                              setEndTime(newTime);
+                              setValue("endTime", newTime);
+                            }}
+                          >
+                            +
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </PopoverContent>
