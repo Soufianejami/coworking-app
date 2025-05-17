@@ -169,19 +169,12 @@ export default function Dashboard() {
         <SummaryCards dailyStats={dailyStats} isLoading={statsLoading} />
       </div>
       
-      <div className={`grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 ${dayClosed ? "opacity-50 pointer-events-none" : ""}`}>
-        {/* Transaction Form */}
-        <div className="lg:col-span-1 order-2 lg:order-1">
-          <TransactionForm
-            open={showTransactionForm && !dayClosed}
-            onOpenChange={setShowTransactionForm}
-          />
-        </div>
-        
-        {/* Revenue Calendar */}
-        <div className="lg:col-span-2 order-1 lg:order-2">
-          <RevenueCalendar />
-        </div>
+      {/* Transaction Form Section */}
+      <div className={dayClosed ? "opacity-50 pointer-events-none" : ""}>
+        <TransactionForm
+          open={showTransactionForm && !dayClosed}
+          onOpenChange={setShowTransactionForm}
+        />
       </div>
       
       {/* Recent Transactions */}

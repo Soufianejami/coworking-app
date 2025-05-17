@@ -356,3 +356,70 @@ export const insertIngredientMovementSchema = createInsertSchema(ingredientMovem
 
 export type InsertIngredientMovement = z.infer<typeof insertIngredientMovementSchema>;
 export type IngredientMovement = typeof ingredientMovements.$inferSelect;
+
+// Types de salles disponibles
+export const ROOM_TYPES = ["grande", "moyenne", "petite", "salle_reunion"] as const;
+export type RoomType = typeof ROOM_TYPES[number];
+
+// Table pour les locations de salles
+export const roomRentals = pgTable("room_rentals", {
+  id: serial("id").primaryKey(),
+  date: timestamp("date").notNull().defaultNow(),
+  roomType: text("room_type", { enum: ROOM_TYPES }).notNull(),
+  price: doublePrecision("price").notNull(), // Prix de location en DH
+  clientName: text("client_name").notNull(),
+  clientContact: text("client_contact"), // Téléphone ou email du client
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  notes: text("notes"),
+  paymentMethod: text("payment_method", { enum: PAYMENT_METHODS }).notNull(),
+  createdById: integer("created_by_id").references(() => users.id),
+});
+
+export const insertRoomRentalSchema = createInsertSchema(roomRentals).omit({
+  id: true,
+}).extend({
+  roomType: z.enum(ROOM_TYPES),
+  paymentMethod: z.enum(PAYMENT_METHODS),
+  date: z.union([
+    z.date(),
+    z.string().transform((str) => {
+      try {
+        return new Date(str);
+      } catch (error) {
+        console.error("Error parsing date:", str, error);
+        return new Date(); // Fallback to current date
+      }
+    })
+  ]),
+  startTime: z.union([
+    z.date(),
+    z.string().transform((str) => {
+      try {
+        return new Date(str);
+      } catch (error) {
+        console.error("Error parsing start time:", str, error);
+        return new Date(); // Fallback to current date
+      }
+    })
+  ]),
+  endTime: z.union([
+    z.date(),
+    z.string().transform((str) => {
+      try {
+        return new Date(str);
+      } catch (error) {
+        console.error("Error parsing end time:", str, error);
+        // Fallback to current date + 1 hour
+        const date = new Date();
+        date.setHours(date.getHours() + 1);
+        return date;
+      }
+    })
+  ]),
+  notes: z.string().optional(),
+  clientContact: z.string().optional(),
+});
+
+export type InsertRoomRental = z.infer<typeof insertRoomRentalSchema>;
+export type RoomRental = typeof roomRentals.$inferSelect;
