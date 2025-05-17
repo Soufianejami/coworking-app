@@ -115,6 +115,16 @@ export default function RoomRentalForm({ open, onOpenChange }: RoomRentalFormPro
 
   // Gérer la soumission du formulaire
   const onSubmit = (data: RoomRentalFormData) => {
+    // Vérification pour s'assurer que toutes les dates sont valides
+    if (!selectedDate || !startTime || !endTime) {
+      toast({
+        title: "Erreur de validation",
+        description: "Veuillez sélectionner toutes les dates et heures.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const payload = {
       ...data,
       date: selectedDate,

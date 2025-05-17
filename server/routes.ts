@@ -10,6 +10,7 @@ import {
 import { format, parseISO, subMonths, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 import { setupAuth, requireAdmin, requireSuperAdmin, requireAdminOrSuperAdmin, hashPassword } from "./auth";
+import { setupRoomRentalsRoutes } from "./room-rentals";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication

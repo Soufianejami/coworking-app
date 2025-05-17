@@ -11,6 +11,8 @@ import SummaryCards from "@/components/dashboard/summary-cards";
 import TransactionForm from "@/components/dashboard/transaction-form";
 import RevenueCalendar from "@/components/dashboard/revenue-calendar";
 import RecentTransactions from "@/components/dashboard/recent-transactions";
+import RoomRentalForm from "@/components/dashboard/room-rental-form";
+import RoomRentalsHistory from "@/components/dashboard/room-rentals-history";
 import { formatDate } from "@/lib/date-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
@@ -46,8 +48,17 @@ export default function Dashboard() {
     queryKey: ['/api/transactions?limit=5'],
   });
   
+  // États pour les formulaires
   const [showTransactionForm, setShowTransactionForm] = useState(false);
+  const [showRoomRentalForm, setShowRoomRentalForm] = useState(false);
+  const [selectedRoomRental, setSelectedRoomRental] = useState<any>(null);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
+  
+  // Fonction pour éditer une location existante
+  const handleEditRoomRental = (rental: any) => {
+    setSelectedRoomRental(rental);
+    setShowRoomRentalForm(true);
+  };
   
   // Mutation for closing the day
   const closeDayMutation = useMutation({
@@ -150,6 +161,18 @@ export default function Dashboard() {
             <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5" />
             <span className="sm:inline">Nouvelle transaction</span>
           </Button>
+          
+          <Button 
+            onClick={() => {
+              setSelectedRoomRental(null);
+              setShowRoomRentalForm(true);
+            }}
+            variant="secondary"
+            className="flex items-center gap-2 text-xs sm:text-sm flex-1 sm:flex-initial"
+          >
+            <Home className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="sm:inline">Nouvelle location</span>
+          </Button>
         </div>
       </div>
       
@@ -175,6 +198,20 @@ export default function Dashboard() {
           open={showTransactionForm && !dayClosed}
           onOpenChange={setShowTransactionForm}
         />
+      </div>
+      
+      {/* Room Rental Form */}
+      <div className={dayClosed ? "opacity-50 pointer-events-none" : ""}>
+        <RoomRentalForm
+          open={showRoomRentalForm && !dayClosed}
+          onOpenChange={setShowRoomRentalForm}
+        />
+      </div>
+      
+      {/* Locations de salles */}
+      <div className={`mt-6 mb-6 ${dayClosed ? "opacity-50 pointer-events-none" : ""}`}>
+        <h3 className="text-xl font-semibold mb-4">Locations de Salles</h3>
+        <RoomRentalsHistory onEdit={handleEditRoomRental} />
       </div>
       
       {/* Recent Transactions */}
