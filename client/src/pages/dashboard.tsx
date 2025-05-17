@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { CalendarIcon, PlusIcon, PowerIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, PlusIcon, PowerIcon, Loader2, Home } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 import { Button } from "@/components/ui/button";

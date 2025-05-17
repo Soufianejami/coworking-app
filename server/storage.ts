@@ -1,13 +1,13 @@
 import { 
   InsertProduct, InsertTransaction, InsertDailyStats, InsertUser, InsertExpense,
   InsertInventory, InsertStockMovement, InsertIngredient, InsertIngredientMovement,
-  InsertRecipe, InsertRecipeIngredient,
+  InsertRecipe, InsertRecipeIngredient, InsertRoomRental,
   Product, Transaction, DailyStats, User, Expense,
   Inventory, StockMovement, Ingredient, IngredientMovement,
-  Recipe, RecipeIngredient,
-  TransactionType, PaymentMethod, ExpenseCategory, StockActionType,
+  Recipe, RecipeIngredient, RoomRental,
+  TransactionType, PaymentMethod, ExpenseCategory, StockActionType, RoomType,
   products, transactions, dailyStats, users, expenses, inventory, stockMovements,
-  ingredients, ingredientMovements, recipes, recipeIngredients
+  ingredients, ingredientMovements, recipes, recipeIngredients, roomRentals
 } from "@shared/schema";
 import { startOfDay, endOfDay, format, parseISO, addMonths } from "date-fns";
 import { db } from "./db";
@@ -90,6 +90,13 @@ export interface IStorage {
   
   // Utilisation de recette lors d'une vente
   useRecipeForTransaction(recipeId: number, userId: number, transactionId: number): Promise<IngredientMovement[]>;
+  
+  // Locations de salles
+  getRoomRentals(): Promise<RoomRental[]>;
+  getRoomRental(id: number): Promise<RoomRental | undefined>;
+  createRoomRental(rental: InsertRoomRental): Promise<RoomRental>;
+  updateRoomRental(id: number, rental: Partial<RoomRental>): Promise<RoomRental | undefined>;
+  deleteRoomRental(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
