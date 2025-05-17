@@ -11,7 +11,7 @@ import SummaryCards from "@/components/dashboard/summary-cards";
 import TransactionForm from "@/components/dashboard/transaction-form";
 import RevenueCalendar from "@/components/dashboard/revenue-calendar";
 import RecentTransactions from "@/components/dashboard/recent-transactions";
-import RoomRentalForm from "@/components/dashboard/room-rental-form";
+import SimpleRoomRentalForm from "@/components/dashboard/simple-room-rental-form";
 import RoomRentalsHistory from "@/components/dashboard/room-rentals-history";
 import { formatDate } from "@/lib/date-utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -202,7 +202,7 @@ export default function Dashboard() {
       
       {/* Room Rental Form */}
       <div className={dayClosed ? "opacity-50 pointer-events-none" : ""}>
-        <RoomRentalForm
+        <SimpleRoomRentalForm
           open={showRoomRentalForm && !dayClosed}
           onOpenChange={setShowRoomRentalForm}
         />
