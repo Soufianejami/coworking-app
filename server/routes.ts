@@ -26,6 +26,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API prefix
   const apiPrefix = "/api";
   
+  // Configurer les routes pour les locations de salles
+  setupRoomRentalsRoutes(app, apiPrefix);
+  
   // Product routes
   app.get(`${apiPrefix}/products`, async (req: Request, res: Response) => {
     try {
