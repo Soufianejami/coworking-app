@@ -1,4 +1,5 @@
 // Script pour créer un utilisateur super_admin en TypeScript
+import 'dotenv/config';
 
 import { pool, db } from './server/db';
 import { users } from './shared/schema';

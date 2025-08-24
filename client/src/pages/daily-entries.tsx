@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +6,7 @@ import { format, startOfDay, endOfDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useAuth } from "@/hooks/use-auth";
 import { CalendarIcon, Edit, MoreVertical, Trash } from "lucide-react";
+import { useReactToPrint } from "react-to-print";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Receipt } from "@/components/ui/Receipt";
 
 export default function DailyEntries() {
   const { toast } = useToast();
@@ -44,7 +46,16 @@ export default function DailyEntries() {
   // State for date selection
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  
+
+  const [receiptDetails, setReceiptDetails] = useState<any>(null);
+
+  const receiptRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    content: () => receiptRef.current,
+    onAfterPrint: () => setReceiptDetails(null),
+  });
+
   // Format selected date for display and querying
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
   
@@ -74,21 +85,36 @@ export default function DailyEntries() {
   // Create new entry
   const createEntry = useMutation({
     mutationFn: async () => {
-      return apiRequest('POST', '/api/transactions', {
+      const newEntry = {
         type: "entry",
         amount: 25, // Fixed price for entry
         paymentMethod,
         clientName: clientName || undefined,
         notes: notes || undefined,
         date: new Date()
-      });
+      };
+      await apiRequest('POST', '/api/transactions', newEntry);
+      return newEntry;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/entry`, selectedDateStr] });
       queryClient.invalidateQueries({ queryKey: [`/api/stats/daily?date=${selectedDateStr}`] });
       toast({
         title: "Entrée ajoutée",
         description: "L'entrée journalière a été enregistrée avec succès."
+      });
+
+      const now = new Date();
+      setReceiptDetails({
+        title: "Reçu Entrée Journalière",
+        details: {
+          date: format(now, "dd/MM/yyyy"),
+          time: format(now, "HH:mm:ss"),
+          item: "Entrée journalière",
+          amount: data.amount,
+          paymentMethod: data.paymentMethod,
+          clientName: data.clientName,
+        },
       });
       
       // Reset form
@@ -104,6 +130,12 @@ export default function DailyEntries() {
       });
     }
   });
+
+  useEffect(() => {
+    if (receiptDetails) {
+      handlePrint();
+    }
+  }, [receiptDetails, handlePrint]);
   
   // Edit entry mutation
   const updateEntry = useMutation({
@@ -184,6 +216,9 @@ export default function DailyEntries() {
   
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <div className="hidden">
+        {receiptDetails && <Receipt ref={receiptRef} {...receiptDetails} />}
+      </div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-semibold text-gray-800">Entrées journalières</h2>

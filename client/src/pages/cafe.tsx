@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
 import { Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { useReactToPrint } from "react-to-print";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { apiRequest } from "@/lib/queryClient";
 import CafeMenu from "@/components/cafe/cafe-menu";
+import { Receipt } from "@/components/ui/Receipt";
 
 export default function Cafe() {
   const { toast } = useToast();
@@ -59,7 +61,21 @@ export default function Cafe() {
     price: number;
     quantity: number;
   }[]>([]);
-  
+  const [receiptDetails, setReceiptDetails] = useState<any>(null);
+
+  const receiptRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    content: () => receiptRef.current,
+    onAfterPrint: () => setReceiptDetails(null),
+  });
+
+  useEffect(() => {
+    if (receiptDetails) {
+      handlePrint();
+    }
+  }, [receiptDetails, handlePrint]);
+
   // Check if user is admin (temporairement, les admins ont les mêmes droits que superadmin)
   const isSuperAdmin = user?.role === "admin";
   
@@ -83,7 +99,7 @@ export default function Cafe() {
   // Create new cafe order
   const createOrder = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/transactions", {
+      const newOrder = {
         type: "cafe",
         amount: orderTotal,
         paymentMethod,
@@ -96,14 +112,30 @@ export default function Cafe() {
           price: item.price,
           quantity: item.quantity
         }))
-      });
+      };
+      await apiRequest("POST", "/api/transactions", newOrder);
+      return newOrder;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/cafe`] });
       queryClient.invalidateQueries({ queryKey: [`/api/stats/daily`] });
       toast({
         title: "Commande ajoutée",
         description: "La commande a été enregistrée avec succès.",
+      });
+
+      const now = new Date();
+      setReceiptDetails({
+        title: "Reçu Café & Boissons",
+        details: {
+          date: format(now, "dd/MM/yyyy"),
+          time: format(now, "HH:mm:ss"),
+          item: "Vente au café",
+          amount: data.amount,
+          paymentMethod: data.paymentMethod,
+          clientName: data.clientName,
+        },
+        items: data.items,
       });
 
       // Reset form
@@ -223,6 +255,9 @@ export default function Cafe() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <div className="hidden">
+        {receiptDetails && <Receipt ref={receiptRef} {...receiptDetails} />}
+      </div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-semibold text-gray-800">Café & Boissons</h2>

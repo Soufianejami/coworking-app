@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format, addMonths } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
+import { useReactToPrint } from "react-to-print";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Edit, MoreVertical, Trash } from "lucide-react";
+import { Receipt } from "@/components/ui/Receipt";
 
 export default function Subscriptions() {
   const { toast } = useToast();
@@ -41,6 +43,21 @@ export default function Subscriptions() {
   const [editStartDate, setEditStartDate] = useState("");
   const [editPaymentMethod, setEditPaymentMethod] = useState("cash");
   const [editNotes, setEditNotes] = useState("");
+
+  const [receiptDetails, setReceiptDetails] = useState<any>(null);
+
+  const receiptRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = useReactToPrint({
+    content: () => receiptRef.current,
+    onAfterPrint: () => setReceiptDetails(null),
+  });
+
+  useEffect(() => {
+    if (receiptDetails) {
+      handlePrint();
+    }
+  }, [receiptDetails, handlePrint]);
   
   // Fetch all subscriptions
   const { data: subscriptions, isLoading } = useQuery({
@@ -66,7 +83,7 @@ export default function Subscriptions() {
       const start = new Date(startDate);
       const end = addMonths(start, 1);
       
-      return apiRequest('POST', '/api/transactions', {
+      const newSubscription = {
         type: "subscription",
         amount: 300, // Fixed price for subscription
         paymentMethod,
@@ -75,15 +92,30 @@ export default function Subscriptions() {
         notes: notes || undefined,
         date: start,
         subscriptionEndDate: end
-      });
+      };
+      await apiRequest('POST', '/api/transactions', newSubscription);
+      return newSubscription;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/transactions/byType/subscription`] });
       queryClient.invalidateQueries({ queryKey: [`/api/stats/daily`] });
       queryClient.invalidateQueries({ queryKey: [`/api/stats/range`] });
       toast({
         title: "Abonnement ajouté",
         description: "L'abonnement mensuel a été enregistré avec succès."
+      });
+
+      const now = new Date();
+      setReceiptDetails({
+        title: "Reçu Abonnement Mensuel",
+        details: {
+          date: format(now, "dd/MM/yyyy"),
+          time: format(now, "HH:mm:ss"),
+          item: "Abonnement mensuel",
+          amount: data.amount,
+          paymentMethod: data.paymentMethod,
+          clientName: data.clientName,
+        },
       });
       
       // Reset form
@@ -213,6 +245,9 @@ export default function Subscriptions() {
   
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <div className="hidden">
+        {receiptDetails && <Receipt ref={receiptRef} {...receiptDetails} />}
+      </div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-semibold text-gray-800">Abonnements</h2>
